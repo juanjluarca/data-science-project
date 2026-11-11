@@ -1,0 +1,7 @@
+# Paquetes de Python del informe (versiones con las que se generó)
+pandas==3.0.5
+numpy==2.5.1
+matplotlib==3.11.1
+seaborn==0.13.2
+scipy==1.18.0
+tabulate==0.10.0
