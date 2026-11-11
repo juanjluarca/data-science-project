@@ -1,0 +1,1076 @@
+---
+title: "Violencia intrafamiliar en Guatemala (2008-2023)"
+subtitle: "Análisis de las denuncias registradas por el INE"
+author:
+  - "Juan Luarca"
+  - "Roberto Calderón"
+  - "Carlos Vela"
+  - "Mayda Matul"
+date: "2026-11-11"
+toc-title: "Índice"
+engine: knitr
+format:
+  html:
+    lang: es
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    embed-resources: true
+    fig-align: center
+    theme: cosmo
+  pdf:
+    pdf-engine: pdflatex
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    colorlinks: true
+    geometry:
+      - margin=2.5cm
+    fig-pos: "H"
+execute:
+  echo: false
+  warning: false
+  message: false
+fig-dpi: 150
+---
+
+```{r}
+#| label: setup-r
+#| include: false
+# R controla el documento (motor knitr) y ejecuta Python con reticulate en una sola sesión
+# compartida: R lee los objetos de Python con py$objeto.
+library(reticulate)
+# Entorno de Python, en orden de prioridad:
+# 1. RETICULATE_PYTHON, si está definida.
+# 2. Un entorno .venv/ dentro del proyecto (pip install -r requirements.txt).
+# 3. Si no hay ninguno, reticulate crea un entorno automático con uv e instala estos paquetes
+#    (mismas versiones que requirements.txt). Así el informe se genera desde RStudio sin configurar nada.
+if (Sys.getenv("RETICULATE_PYTHON") == "") {
+  if (dir.exists(".venv")) {
+    use_virtualenv(".venv", required = TRUE)
+  } else {
+    py_require(c("pandas==3.0.5", "numpy==2.5.1", "matplotlib==3.11.1", "seaborn==0.13.2",
+                 "scipy==1.18.0", "tabulate==0.10.0"), python_version = ">=3.11")
+  }
+}
+library(ggplot2)
+set.seed(2026)
+# reticulate imprime el valor de cada expresión de Python (p. ej. lo que devuelve plt.xlim);
+# se oculta la salida de texto por defecto. Las gráficas se muestran igual y los chunks con
+# tablas usan `output: asis`.
+knitr::opts_chunk$set(results = "hide")
+
+# Evalúa una expresión de Python para insertarla en el texto: `{r} pyv("fmt(n_total)")`
+pyv <- function(expr) py_eval(expr)
+# Formato de números calculados en R
+num <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+```
+
+```{python}
+#| label: setup
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
+from scipy import stats
+
+np.set_printoptions(legacy="1.25")  # escalares de numpy como números simples en el texto
+sns.set_theme(style="whitegrid")
+plt.rcParams.update({
+    "axes.titleweight": "bold",
+    "axes.titlesize": 12,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "grid.color": "#e6e6e6",
+})
+
+# Colores
+COLOR = "#2a78d6"     # serie principal
+COLOR_2 = "#eb6834"   # segunda serie
+COLOR_3 = "#1baf7a"   # tercera serie
+COLOR_4 = "#eda100"   # cuarta serie
+GRIS = "#8a8984"      # referencias y contexto
+AZULES = LinearSegmentedColormap.from_list("azules", ["#f5f9fe", "#9ec5f4", "#2a78d6", "#0d366b"])
+miles = plt.FuncFormatter(lambda v, _: f"{v:,.0f}")
+
+
+# Formato de números para el texto
+def fmt(x, d=0):
+    return f"{x:,.{d}f}"
+
+
+def pct(x, d=1):
+    return f"{x:.{d}f} %"
+
+
+# Tabla en formato Markdown (el chunk que la usa debe tener `output: asis`)
+def tabla(df, decimales=1, **opciones):
+    print("\n" + df.to_markdown(index=False, floatfmt=f",.{decimales}f", intfmt=",", **opciones) + "\n")
+
+
+meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+         "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+num_mes = {m: i + 1 for i, m in enumerate(meses)}
+PAREJA = ["esposos(as)", "conviviente", "ex-conyuges"]
+
+# Cargar datos (ruta relativa). Las columnas _ENC son las mismas variables codificadas como
+# enteros, así que se descartan al leer.
+ruta = "data/violencia_intrafamiliar_gt.csv"
+columnas = pd.read_csv(ruta, nrows=0).columns
+col_enc = [c for c in columnas if c.endswith("_ENC")]
+col_base = [c for c in columnas if not c.endswith("_ENC")]
+df = pd.read_csv(ruta, usecols=col_base, low_memory=False)
+```
+
+```{python}
+#| label: cifras-resumen
+n_total = len(df)
+pct_mujer_hombre = (df["VIC_SEXO"].eq("mujeres") & df["AGR_SEXO"].eq("hombres")).mean() * 100
+pct_pareja = df["VIC_REL_AGR"].isin(PAREJA).mean() * 100
+
+fisica_anio = df["VIOLENCIA_FISICA"].eq("presente").groupby(df["ANO_EMISION"]).mean() * 100
+
+
+def pct_sexual(rango):
+    filas = df["VIC_RANGO_EDAD"].eq(rango) & df["VIC_SEXO"].eq("mujeres")
+    return df.loc[filas, "VIOLENCIA_SEXUAL"].eq("presente").mean() * 100
+
+
+sexual_ninas, sexual_adultas = pct_sexual("ninio"), pct_sexual("adulto joven")
+
+# Denuncias de cada mes de 2020 frente al promedio del mismo mes en 2017-2019
+tabla_mes = df.groupby(["ANO_EMISION", df["MES_EMISION"].map(num_mes)]).size().unstack()
+esperado = tabla_mes.loc[2017:2019].mean()
+cambio_2020 = (tabla_mes.loc[2020] / esperado - 1) * 100
+caida_min, caida_max = -cambio_2020[[3, 4, 5, 6]].max(), -cambio_2020[[3, 4, 5, 6]].min()
+```
+
+# Resumen ejecutivo {.unnumbered}
+
+Se analizan `{r} pyv("fmt(n_total)")` denuncias de violencia intrafamiliar registradas en Guatemala entre 2008 y 2023. Los hallazgos principales son:
+
+- **Es una violencia de género y de pareja.** En el `{r} pyv("pct(pct_mujer_hombre)")` de las denuncias la víctima es una mujer y el agresor un hombre, y en el `{r} pyv("pct(pct_pareja)")` el agresor es la pareja o expareja. Un segundo patrón, la violencia entre generaciones, explica buena parte de las víctimas hombres.
+- **La violencia física pierde peso.** Pasa del `{r} pyv("pct(fisica_anio[2008], 0)")` de las denuncias en 2008 al `{r} pyv("pct(fisica_anio[2023], 0)")` en 2023. Lo más probable es que se denuncie antes, no que haya menos violencia.
+- **Las niñas son el grupo de mayor riesgo de violencia sexual**: aparece en el `{r} pyv("pct(sexual_ninas, 0)")` de las denuncias de niñas menores de 14 años, frente al `{r} pyv("pct(sexual_adultas, 0)")` en mujeres de 19 a 40.
+- **El confinamiento de 2020 redujo las denuncias entre un `{r} pyv("pct(caida_min, 0)")` y un `{r} pyv("pct(caida_max, 0)")`** de marzo a junio: denuncias que no se hicieron, no violencia que no ocurrió.
+- **Hay señales de subregistro**: el altiplano indígena tiene las tasas de denuncia más bajas del país.
+- **Un modelo de regresión logística** confirma que la violencia física se asocia a ser mujer o menor de edad, a convivir en pareja con el agresor, a la baja escolaridad y a ser indígena, aun controlando por las demás variables. Pero su capacidad predictiva es modesta: el perfil de la víctima explica poco del tipo de violencia.
+
+# Introducción
+
+Guatemala registra la violencia intrafamiliar mediante una **boleta estadística** que llenan las instituciones que reciben denuncias (Organismo Judicial, Policía Nacional Civil, Ministerio Público y otras), según el Decreto 97-96. El Instituto Nacional de Estadística (INE) consolida y publica esos registros. Son la principal fuente para dimensionar un problema que suele quedar oculto en el ámbito privado.
+
+**Preguntas de investigación**
+
+1. ¿Quiénes son las víctimas y los agresores, y qué tipos de violencia predominan?
+2. ¿Cómo cambiaron las denuncias entre 2008 y 2023, incluido el efecto de la pandemia?
+3. ¿Qué diferencias hay entre departamentos al ajustar por población?
+4. ¿Qué características de la víctima y del vínculo con el agresor se asocian a la violencia física cuando se consideran todas a la vez?
+
+**Alcance.** Los datos son **denuncias**, no prevalencia: todas las conclusiones se refieren a la violencia que llega a denunciarse.
+
+# Datos
+
+## Fuente
+
+```{python}
+#| label: estructura
+n_col_total, n_col_base, n_col_enc = len(columnas), len(col_base), len(col_enc)
+n_numericas = df.select_dtypes("number").shape[1]
+n_deptos = df.loc[~df["HEC_DEPTO"].isin(["ignorado", "desconocido"]), "HEC_DEPTO"].nunique()
+
+
+def grupo(col):
+    if col.startswith("VIC_"):
+        return "Víctima"
+    if col.startswith(("AGR_", "OTROS_AGRESORES", "AGRESORES_")):
+        return "Agresor"
+    if col.startswith("HEC_") or col.startswith("VIOLENCIA_"):
+        return "Hecho (cuándo, dónde, tipo)"
+    if col.endswith("_EMISION") or col in ("DEPTO", "DEPTO_MCPIO", "QUIEN_REPORTA", "INST_DENUN_HECHO", "INST_DONDE_DENUNCIO"):
+        return "Registro de la denuncia"
+    if col.startswith(("ARTICULO", "LEY_", "ORGANISMO_", "MEDIDAS_", "TIPO_MEDIDA", "CONDUCENTE")):
+        return "Proceso judicial"
+    if col.startswith(("DIF_", "QUIEN_ES_MAYOR")):
+        return "Comparación víctima-agresor (derivada)"
+    return "Hogar / otras víctimas"
+
+
+diccionario = pd.DataFrame({"columna": df.columns, "grupo": [grupo(c) for c in df.columns]})
+resumen_grupos = (diccionario.groupby("grupo")
+                  .agg(columnas=("columna", "size"),
+                       ejemplos=("columna", lambda s: ", ".join(s.head(4))))
+                  .sort_values("columnas", ascending=False)
+                  .reset_index()
+                  .rename(columns={"grupo": "Grupo", "columnas": "Columnas", "ejemplos": "Ejemplos"}))
+```
+
+- **Origen.** Registros administrativos de violencia intrafamiliar del **INE de Guatemala**. Se usó la versión ya unificada para 2008-2023 publicada en Kaggle: *Violencia Intrafamiliar en Guatemala INE 2008-2023* (usuario DieggsPapu, versión 11, actualizada en septiembre de 2025), <https://www.kaggle.com/datasets/dieggspapu/violencia-intrafamiliar-en-guatemala-ine-2008-2023>. El autor unió los archivos anuales del INE, homogeneizó las categorías y agregó variables derivadas (`DIF_*`, rangos de edad y versiones codificadas `_ENC`).
+- **Licencia y condiciones de uso.** En Kaggle la licencia figura como *Unknown*. Los datos de origen son estadísticas públicas del INE, de libre consulta. Se usan solo con fines académicos, citando ambas fuentes.
+- **Obtención.** El archivo pesa unos 830 MB y no cabe en el repositorio. El `README.md` explica cómo descargarlo de Kaggle y dónde colocarlo (`data/violencia_intrafamiliar_gt.csv`).
+
+## Estructura
+
+**Granularidad**: una fila es una denuncia. **Periodo**: 2008-2023 (año de registro). **Cobertura**: los `{r} pyv("n_deptos")` departamentos del país. El archivo tiene `{r} pyv("fmt(n_total)")` filas y `{r} pyv("n_col_total")` columnas. De ellas, `{r} pyv("n_col_enc")` (terminadas en `_ENC`) repiten la información en forma numérica, así que se trabaja con las `{r} pyv("n_col_base")` originales. Hay `{r} pyv("n_numericas")` numéricas (edades, años, conteos) y el resto son categóricas de texto.
+
+```{python}
+#| label: tabla-grupos
+#| output: asis
+tabla(resumen_grupos)
+```
+
+La víctima (`VIC_`) y el agresor (`AGR_`) tienen el mismo perfil: sexo, edad, escolaridad, pueblo, estado civil y trabajo. `VIC_REL_AGR` se lee "la víctima es … del agresor". Las cuatro columnas `VIOLENCIA_*` indican si cada tipo de violencia está presente; una denuncia puede tener varios.
+
+## Calidad de los datos
+
+```{python}
+#| label: faltantes
+def es_faltante(s):
+    if s.dtype == "float64":
+        return s.isin([9999, 99]) if s.name.startswith(("AGR_OTR", "AGRESORES_OTROS")) else s.eq(9999)
+    texto = s.str.lower()
+    return texto.str.contains("ignorad") | texto.isin(["9999", "nan nan nan nan", "no indica", "desconocido"])
+
+
+faltantes = (pd.DataFrame({c: es_faltante(df[c]) for c in df.columns})
+             .mean().mul(100).sort_values(ascending=False))
+nulos_pandas = int(df.isna().sum().sum())
+n_mas_50 = int((faltantes > 50).sum())
+n_sin_faltantes = int((faltantes == 0).sum())
+n_duplicados = int(df.duplicated().sum())
+```
+
+`pandas` no encuentra nulos (`{r} pyv("nulos_pandas")`), pero los faltantes están **codificados**: `9999` en edades, años y conteos; `99` en el día del hecho y en los conteos de otros agresores; `"ignorado"` y variantes en las categóricas; y `"nan nan nan nan"` en los artículos legales. Contados así, `{r} pyv("n_mas_50")` columnas tienen más del 50 % de faltantes y solo `{r} pyv("n_sin_faltantes")` están completas.
+
+```{python}
+#| label: tabla-faltantes
+#| output: asis
+tabla(faltantes.head(8).rename("% faltante").rename_axis("Columna con más faltantes").reset_index())
+```
+
+- El **bloque judicial**, las **ocupaciones** y los conteos de **otros agresores** están casi vacíos. Las variables de **perfil** y del **hecho** están casi completas y son las que se analizan.
+- `HEC_ANO` tiene años inválidos (`200`, `9999`). Para las series de tiempo se usa `ANO_EMISION`, que está limpio.
+- `MEDIDAS_SEGURIDAD` **cambió de codificación en 2014** (de `"medidas otorgadas"`/`"medidas no otorgadas"` a `"si"`/`"no"`), y `DIF_GRUPET` tiene el sentido **invertido** respecto a `DIF_SEXO`.
+- Los días 1 y 15 de cada mes aparecen con más frecuencia de la esperada: hay **redondeo de fechas** (Anexo E).
+- Hay `{r} pyv("fmt(n_duplicados)")` filas idénticas (`{r} pyv("pct(n_duplicados / n_total * 100)")`). Como no hay identificador de caso, no se puede distinguir un error de captura de dos denuncias distintas con los mismos datos. Se conservan.
+
+## Limitaciones, sesgos y consideraciones éticas
+
+- **Subregistro.** Solo se ve la violencia denunciada. Las barreras de acceso (distancia, idioma, desconfianza) varían por territorio y por grupo, así que los datos subrepresentan a la población rural e indígena y la violencia sexual.
+- **Sesgo de registro.** La calidad de la boleta depende de la institución que la llena y cambió con los años, como muestran las recodificaciones.
+- **Datos sensibles.** Los registros no contienen nombres ni identificadores directos. Aun así, describen hechos de violencia, en algunos casos contra menores. Por eso solo se presentan resultados agregados y no se intenta identificar casos individuales.
+- **Interpretación responsable.** Las diferencias entre pueblos o departamentos describen **denuncias** y no deben leerse como rasgos de esos grupos. Una tasa baja puede reflejar menos acceso a denunciar, no menos violencia.
+
+# Metodología
+
+## Herramientas y uso combinado de R y Python
+
+El informe usa el motor **knitr** de Quarto. R controla el documento y ejecuta Python con **reticulate** en una sola sesión compartida, de modo que R lee directamente los objetos que prepara Python (`py$objeto`).
+
+| Etapa | Herramienta | Justificación |
+|---|---|---|
+| Ingesta, limpieza, variables derivadas y exportación | Python (`pandas`, `numpy`) | Lectura eficiente de un CSV de 830 MB y manipulación de datos tabulares grandes |
+| Análisis exploratorio y gráficas | Python (`matplotlib`, `seaborn`, `scipy`) | Gráficas personalizadas y estadísticos de asociación ($\chi^2$, V de Cramér, Spearman) |
+| Modelo estadístico | R (`glm`, `ggplot2`) | `glm` es la implementación de referencia de la regresión logística, con inferencia (errores estándar, intervalos de confianza) lista para interpretar |
+
+## Limpieza y transformación
+
+```{python}
+#| label: limpieza
+num = df.select_dtypes("number").columns
+df_limpio = df.copy()
+df_limpio[num] = df_limpio[num].replace(9999, np.nan)
+df_limpio.loc[df_limpio["HEC_ANO"] < 2000, "HEC_ANO"] = np.nan
+df_limpio.loc[df_limpio["HEC_DIA"] == 99, "HEC_DIA"] = np.nan
+# Desde 2014 la variable usa "si"/"no" en lugar de "medidas otorgadas"/"medidas no otorgadas"
+df_limpio["MEDIDAS_SEGURIDAD"] = df_limpio["MEDIDAS_SEGURIDAD"].replace(
+    {"si": "medidas otorgadas", "no": "medidas no otorgadas"})
+
+
+# Outliers: regla del rango intercuartílico (IQR) en las variables numéricas principales
+def resumen_iqr(col):
+    s = df_limpio[col].dropna()
+    q1, q3 = s.quantile([0.25, 0.75])
+    bajo, alto = q1 - 1.5 * (q3 - q1), q3 + 1.5 * (q3 - q1)
+    return {"Variable": col, "Mínimo": s.min(), "Máximo": s.max(),
+            "Límite IQR superior": alto, "Valores fuera del IQR": int(((s < bajo) | (s > alto)).sum())}
+
+
+outliers = pd.DataFrame([resumen_iqr(c) for c in ["VIC_EDAD", "AGR_EDAD", "TOTAL_HIJOS"]])
+n_agr_menor12 = int((df_limpio["AGR_EDAD"] < 12).sum())
+df_limpio.loc[df_limpio["AGR_EDAD"] < 12, "AGR_EDAD"] = np.nan
+
+# Variables derivadas
+df_limpio["MES_EMISION_NUM"] = df_limpio["MES_EMISION"].map(num_mes)
+df_limpio["HEC_MES_NUM"] = df_limpio["HEC_MES"].map(num_mes)
+df_limpio["FECHA_HECHO"] = pd.to_datetime(
+    dict(year=df_limpio["HEC_ANO"], month=df_limpio["HEC_MES_NUM"], day=df_limpio["HEC_DIA"]),
+    errors="coerce")
+df_limpio["DIA_SEMANA"] = df_limpio["FECHA_HECHO"].dt.dayofweek  # 0 = lunes
+df_limpio["DIF_EDAD"] = df_limpio["AGR_EDAD"] - df_limpio["VIC_EDAD"]
+
+pct_fechas_validas = df_limpio["FECHA_HECHO"].notna().mean() * 100
+edad_media_sin_limpiar = df["VIC_EDAD"].mean()
+pareja = df_limpio["VIC_REL_AGR"].isin(PAREJA)
+n_menor_pareja = int((pareja & (df_limpio["VIC_EDAD"] < 18)).sum())
+```
+
+1. **Faltantes.** Los códigos `9999` de las columnas numéricas pasan a `NaN`; sin este paso la edad media de las víctimas sería de `{r} pyv("fmt(edad_media_sin_limpiar)")` años. Los años del hecho menores a 2000 y el día `99` también se marcan como faltantes. Las categorías `"ignorado"` se mantienen en el EDA, para no ocultar la falta de información, y se excluyen solo del modelo.
+2. **Inconsistencias.** Se unifican las dos codificaciones de `MEDIDAS_SEGURIDAD`.
+3. **Outliers.** Se revisaron con la regla del rango intercuartílico (IQR):
+
+```{python}
+#| label: tabla-outliers
+#| output: asis
+tabla(outliers, decimales=0)
+```
+
+   Los valores fuera del IQR son **plausibles** (víctimas adultas mayores, familias numerosas) y se conservan, porque eliminarlos quitaría justamente a los grupos más vulnerables. Solo se anulan las `{r} pyv("n_agr_menor12")` edades de agresores menores de 12 años, que muy probablemente son errores de captura.
+
+4. **Variables derivadas.** Con día, mes y año se reconstruye la **fecha del hecho** (válida en el `{r} pyv("pct(pct_fechas_validas)")` de los registros) y el **día de la semana**. También se calcula la **diferencia de edad con signo** (agresor menos víctima), porque `DIF_EDAD_VIC_AGR` viene en valor absoluto.
+5. **Duplicados.** Se conservan (ver Calidad de los datos).
+
+Hay `{r} pyv("fmt(n_menor_pareja)")` víctimas menores de 18 años registradas como pareja o expareja del agresor. No se tratan como error: en Guatemala las uniones tempranas son frecuentes, y el matrimonio de menores de 18 años se prohibió recién en 2017 (Decreto 13-2017).
+
+```{python}
+#| label: exportar-powerbi
+# Datos limpios para el dashboard de Power BI: solo las columnas que se analizan
+cols_dashboard = [
+    "ANO_EMISION", "MES_EMISION_NUM", "FECHA_HECHO", "DIA_SEMANA", "HEC_DEPTO", "HEC_AREA",
+    "VIC_SEXO", "VIC_EDAD", "VIC_RANGO_EDAD", "VIC_NIV_ESCOLARIDAD", "VIC_ES_INDIGENA", "VIC_TRABAJA",
+    "AGR_SEXO", "AGR_EDAD", "DIF_EDAD", "VIC_REL_AGR", "HEC_TIPAGRE",
+    "VIOLENCIA_FISICA", "VIOLENCIA_PSICOLOGICA", "VIOLENCIA_SEXUAL", "VIOLENCIA_PATRIMONIAL",
+    "HEC_RECUR_DENUN", "INST_DENUN_HECHO", "QUIEN_REPORTA", "TOTAL_HIJOS", "MEDIDAS_SEGURIDAD",
+]
+# Enteros con faltantes como Int64 para que se exporten sin decimales (2008 y no 2008.0)
+enteros = ["ANO_EMISION", "DIA_SEMANA", "VIC_EDAD", "AGR_EDAD", "DIF_EDAD", "TOTAL_HIJOS"]
+(df_limpio[cols_dashboard].astype({c: "Int64" for c in enteros})
+ .to_csv("data/violencia_limpia.csv", index=False))
+```
+
+6. **Exportación.** Las `{r} pyv("len(cols_dashboard)")` columnas analizadas, ya limpias, se guardan en `data/violencia_limpia.csv` para el dashboard de Power BI. Así el informe y el dashboard parten de la misma limpieza. Las poblaciones departamentales para calcular tasas se guardan en `data/poblacion_departamentos_2018.csv` (sección [Diferencias territoriales](#territorio)).
+
+## Técnicas de análisis
+
+- **Asociación entre variables categóricas**: V de Cramér, calculada a partir del estadístico $\chi^2$.
+- **Comparación territorial**: tasa media anual de denuncias por cada 100 mil habitantes, con la población del Censo 2018.
+- **Efecto de la pandemia**: denuncias de cada mes de 2020 frente al promedio del mismo mes en 2017-2019.
+- **Modelo**: regresión logística de la presencia de violencia física. Se entrena con el 70 % de los casos completos y se evalúa en el 30 % restante (semilla `2026`), con AUC, exactitud, sensibilidad y especificidad.
+
+# Resultados
+
+## Víctimas y agresores
+
+```{python}
+#| label: sexo-cruce
+#| output: asis
+sexo = pd.crosstab(df_limpio["VIC_SEXO"], df_limpio["AGR_SEXO"], normalize=True).mul(100)
+pct_vic_mujer = df_limpio["VIC_SEXO"].eq("mujeres").mean() * 100
+pct_agr_hombre = df_limpio["AGR_SEXO"].eq("hombres").mean() * 100
+tabla(sexo.rename(index={"hombres": "Víctima hombre", "mujeres": "Víctima mujer"},
+                  columns={"hombres": "Agresor hombre (%)", "mujeres": "Agresora mujer (%)"})
+      .rename_axis("").reset_index())
+```
+
+```{python}
+#| label: edad-relacion
+#| fig-height: 4.5
+edades = df_limpio["VIC_EDAD"].dropna()
+edad_q1, edad_med, edad_q3 = edades.quantile([0.25, 0.5, 0.75])
+edad_med_agr = df_limpio["AGR_EDAD"].median()
+pct_menores = (edades < 18).mean() * 100
+relacion = df_limpio["VIC_REL_AGR"].value_counts(normalize=True).mul(100).sort_values()
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.5), gridspec_kw={"width_ratios": [1.1, 1]})
+ax1.hist(edades, bins=range(0, 100, 2), color=COLOR, edgecolor="white")
+ax1.axvline(edad_med, color="#333333", linestyle="--", linewidth=1.5)
+ax1.text(edad_med + 1, ax1.get_ylim()[1] * 0.92, f"Mediana: {edad_med:.0f} años", color="#333333")
+ax1.set_title("Edad de las víctimas")
+ax1.set_xlabel("Edad de la víctima (años)")
+ax1.set_ylabel("Número de denuncias")
+ax1.yaxis.set_major_formatter(miles)
+
+ax2.barh(relacion.index, relacion.values, color=COLOR)
+for y, v in enumerate(relacion.values):
+    ax2.text(v + 0.4, y, f"{v:.1f} %", va="center", fontsize=9)
+ax2.set_title("Relación de la víctima con el agresor")
+ax2.set_xlabel("Porcentaje de denuncias (%)")
+ax2.set_ylabel("La víctima es ... del agresor")
+ax2.set_xlim(0, relacion.max() + 6)
+plt.tight_layout()
+plt.show()
+```
+
+- **En el `{r} pyv("pct(sexo.loc['mujeres', 'hombres'])")` de las denuncias la víctima es una mujer y el agresor un hombre.** Las víctimas son mujeres en el `{r} pyv("pct(pct_vic_mujer)")` de los casos y los agresores son hombres en el `{r} pyv("pct(pct_agr_hombre)")`.
+- La víctima típica es una **adulta joven**: mediana de `{r} pyv("fmt(edad_med)")` años, con la mitad de los casos entre `{r} pyv("fmt(edad_q1)")` y `{r} pyv("fmt(edad_q3)")`. Los agresores son algo mayores (mediana de `{r} pyv("fmt(edad_med_agr)")`) y el `{r} pyv("pct(pct_menores)")` de las víctimas son menores de edad.
+- La violencia ocurre sobre todo **en la pareja**: esposo(a), conviviente o excónyuge suman el `{r} pyv("pct(pct_pareja)")` de los casos.
+
+## Tipos de violencia
+
+```{python}
+#| label: tipos-violencia
+tipos = {
+    "Psicológica": "VIOLENCIA_PSICOLOGICA",
+    "Física": "VIOLENCIA_FISICA",
+    "Patrimonial": "VIOLENCIA_PATRIMONIAL",
+    "Sexual": "VIOLENCIA_SEXUAL",
+}
+pct_tipo = pd.Series({k: df_limpio[v].eq("presente").mean() * 100 for k, v in tipos.items()}).sort_values()
+combinaciones = df_limpio["HEC_TIPAGRE"].value_counts(normalize=True).mul(100)
+
+plt.figure(figsize=(9, 3.4))
+plt.barh(pct_tipo.index, pct_tipo.values, color=COLOR)
+for y, v in enumerate(pct_tipo.values):
+    plt.text(v + 1, y, f"{v:.1f} %", va="center", fontsize=9)
+plt.title("Tipos de violencia presentes en las denuncias")
+plt.xlabel("Porcentaje de denuncias en que está presente (%)")
+plt.ylabel("Tipo de violencia")
+plt.xlim(0, 100)
+plt.tight_layout()
+plt.show()
+```
+
+Una denuncia puede incluir varios tipos de violencia. La **psicológica** está presente en el `{r} pyv("pct(pct_tipo['Psicológica'])")` de los casos y la **física** en el `{r} pyv("pct(pct_tipo['Física'])")`. Las combinaciones más comunes son física + psicológica (`{r} pyv("pct(combinaciones['fisica-psicologica'])")`) y solo psicológica (`{r} pyv("pct(combinaciones['psicologica'])")`). La violencia **sexual** (`{r} pyv("pct(pct_tipo['Sexual'])")`) está casi con seguridad subregistrada: suele tramitarse por la vía penal o no se denuncia.
+
+## Relaciones entre variables
+
+Casi todas las variables son categóricas, así que en lugar de la correlación de Pearson se usa la **V de Cramér**: 0 indica independencia y 1, asociación perfecta. Como guía, menos de 0.1 es una asociación despreciable, de 0.1 a 0.3 débil y más de 0.3 moderada.
+
+```{python}
+#| label: mapa-asociaciones
+#| fig-height: 8
+def v_cramer(x, y):
+    tabla_c = pd.crosstab(x, y)
+    chi2 = stats.chi2_contingency(tabla_c, correction=False)[0]
+    return np.sqrt(chi2 / (tabla_c.values.sum() * (min(tabla_c.shape) - 1)))
+
+
+variables = {
+    "Sexo víctima": "VIC_SEXO",
+    "Sexo agresor": "AGR_SEXO",
+    "Relación con agresor": "VIC_REL_AGR",
+    "Edad víctima (rango)": "VIC_RANGO_EDAD",
+    "Víctima indígena": "VIC_ES_INDIGENA",
+    "Escolaridad víctima": "VIC_NIV_ESCOLARIDAD",
+    "Víctima trabaja": "VIC_TRABAJA",
+    "Área": "HEC_AREA",
+    "Departamento": "HEC_DEPTO",
+    "V. física": "VIOLENCIA_FISICA",
+    "V. psicológica": "VIOLENCIA_PSICOLOGICA",
+    "V. sexual": "VIOLENCIA_SEXUAL",
+    "V. patrimonial": "VIOLENCIA_PATRIMONIAL",
+    "Denuncia reincidente": "HEC_RECUR_DENUN",
+    "Institución": "INST_DENUN_HECHO",
+}
+nombres = list(variables)
+matriz_v = pd.DataFrame(np.nan, index=nombres, columns=nombres)
+for i, a in enumerate(nombres):
+    for b in nombres[:i]:
+        matriz_v.loc[a, b] = v_cramer(df_limpio[variables[a]], df_limpio[variables[b]])
+
+plt.figure(figsize=(10, 8.5))
+sns.heatmap(matriz_v, annot=True, fmt=".2f", cmap=AZULES, vmin=0, vmax=0.6,
+            linewidths=1, linecolor="white", annot_kws={"size": 9},
+            cbar_kws={"label": "V de Cramér (0 = sin asociación)"})
+plt.grid(False)
+plt.title("Fuerza de asociación entre pares de variables (V de Cramér)")
+plt.xlabel("")
+plt.ylabel("")
+plt.tight_layout()
+plt.show()
+
+
+def V(a, b):
+    return fmt(matriz_v.loc[a, b], 2)
+
+
+v_max_tipos = matriz_v.loc[["V. física", "V. psicológica", "V. sexual", "V. patrimonial"]].max().max()
+```
+
+- La asociación más fuerte es **sexo de la víctima con sexo del agresor** (`{r} pyv("V('Sexo agresor', 'Sexo víctima')")`): casi siempre son de sexo distinto.
+- **Departamento con pueblo indígena** (`{r} pyv("V('Departamento', 'Víctima indígena')")`) y con **área** (`{r} pyv("V('Departamento', 'Área')")`) reflejan la composición de cada departamento. Advierten que comparar departamentos es también comparar poblaciones distintas.
+- La violencia **física** se asocia sobre todo con la relación con el agresor (`{r} pyv("V('V. física', 'Relación con agresor')")`) y la escolaridad (`{r} pyv("V('V. física', 'Escolaridad víctima')")`); la **sexual**, con la edad (`{r} pyv("V('V. sexual', 'Edad víctima (rango)')")`).
+- En general las asociaciones con los tipos de violencia son **débiles** (máximo `{r} pyv("fmt(v_max_tipos, 2)")`): ninguna característica determina por sí sola el tipo de violencia.
+
+## Dos fenómenos distintos: violencia de pareja y entre generaciones
+
+```{python}
+#| label: relacion-sexo
+rel_sexo = (pd.crosstab(df_limpio["VIC_REL_AGR"], df_limpio["VIC_SEXO"], normalize="columns")
+            .mul(100).sort_values("mujeres"))
+
+y = np.arange(len(rel_sexo))
+alto = 0.4
+plt.figure(figsize=(9, 5))
+plt.barh(y + alto / 2, rel_sexo["mujeres"], height=alto, color=COLOR, label="Víctima mujer")
+plt.barh(y - alto / 2, rel_sexo["hombres"], height=alto, color=COLOR_2, label="Víctima hombre")
+plt.yticks(y, rel_sexo.index)
+plt.title("Relación con el agresor según el sexo de la víctima")
+plt.xlabel("Porcentaje de las víctimas de ese sexo (%)")
+plt.ylabel("La víctima es ... del agresor")
+plt.legend(loc="lower right")
+plt.tight_layout()
+plt.show()
+
+pct_pareja_m = rel_sexo.loc[PAREJA, "mujeres"].sum()
+pct_pareja_h = rel_sexo.loc[PAREJA, "hombres"].sum()
+pct_pareja_mh_total = (pareja & df_limpio["VIC_SEXO"].eq("mujeres") & df_limpio["AGR_SEXO"].eq("hombres")).mean() * 100
+```
+
+- **Mujeres**: el `{r} pyv("pct(pct_pareja_m, 0)")` de los agresores son su pareja o expareja.
+- **Hombres** (`{r} pyv("pct(100 - pct_vic_mujer)")` de las víctimas): la pareja pesa menos (`{r} pyv("pct(pct_pareja_h, 0)")`), y en cambio pesan mucho los **hijos que agreden a su padre** (`padres/madres`, `{r} pyv("pct(rel_sexo.loc['padres/madres', 'hombres'], 0)")`), los **hermanos** (`{r} pyv("pct(rel_sexo.loc['hermanos(as)', 'hombres'], 0)")`) y **otros parientes** (`{r} pyv("pct(rel_sexo.loc['otro pariente', 'hombres'], 0)")`).
+
+Las denuncias mezclan dos fenómenos: la **violencia de pareja contra mujeres** (`{r} pyv("pct(pct_pareja_mh_total, 0)")` del total) y la **violencia entre generaciones**, que afecta más a hombres y a adultos mayores. Conviene analizarlos por separado.
+
+## Violencia sexual según la edad y el sexo
+
+```{python}
+#| label: sexual-edad
+orden_edad = ["ninio", "adolescente", "adulto joven", "adulto medio", "adulto mayor"]
+etiquetas_edad = ["Niñez\n(1-13)", "Adolescencia\n(14-18)", "Adulto joven\n(19-40)",
+                  "Adulto medio\n(41-60)", "Adulto mayor\n(61+)"]
+sexual_edad = (df_limpio.assign(sexual=df_limpio["VIOLENCIA_SEXUAL"].eq("presente"))
+               .groupby(["VIC_RANGO_EDAD", "VIC_SEXO"])["sexual"].mean().mul(100)
+               .unstack().loc[orden_edad])
+
+x = np.arange(len(orden_edad))
+ancho = 0.38
+plt.figure(figsize=(10, 4.5))
+plt.bar(x - ancho / 2, sexual_edad["mujeres"], width=ancho, color=COLOR, label="Víctima mujer")
+plt.bar(x + ancho / 2, sexual_edad["hombres"], width=ancho, color=COLOR_2, label="Víctima hombre")
+for xi, v in zip(x - ancho / 2, sexual_edad["mujeres"]):
+    plt.text(xi, v + 0.4, f"{v:.1f}", ha="center", fontsize=9)
+for xi, v in zip(x + ancho / 2, sexual_edad["hombres"]):
+    plt.text(xi, v + 0.4, f"{v:.1f}", ha="center", fontsize=9)
+plt.xticks(x, etiquetas_edad)
+plt.title("Porcentaje de denuncias con violencia sexual según edad y sexo de la víctima")
+plt.xlabel("Rango de edad de la víctima (años)")
+plt.ylabel("Denuncias con violencia sexual (%)")
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+n_ninos = int((df_limpio["VIC_RANGO_EDAD"] == "ninio").sum())
+```
+
+Es el contraste más fuerte del análisis: **el `{r} pyv("pct(sexual_edad.loc['ninio', 'mujeres'])")` de las denuncias de niñas menores de 14 años incluye violencia sexual**, frente al `{r} pyv("pct(sexual_edad.loc['adulto joven', 'mujeres'])")` en mujeres de 19 a 40. El grupo es pequeño (`{r} pyv("fmt(n_ninos)")` denuncias) y estos delitos se tramitan sobre todo por la vía penal, así que la cifra **subestima** el problema. La violencia sexual también es mucho mayor cuando la víctima es hijastra(o) o nieta(o) del agresor (Anexo C).
+
+## Evolución en el tiempo
+
+```{python}
+#| label: serie-mensual
+mensual = df_limpio.groupby(["ANO_EMISION", "MES_EMISION_NUM"]).size()
+mensual.index = pd.to_datetime([f"{int(a)}-{int(m):02d}-01" for a, m in mensual.index])
+
+plt.figure(figsize=(10, 4.3))
+plt.plot(mensual.index, mensual.values, color=COLOR, linewidth=1.6, label="Denuncias del mes")
+plt.plot(mensual.index, mensual.rolling(12, center=True).mean(), color=GRIS, linewidth=1.4,
+         linestyle="--", label="Media móvil de 12 meses")
+plt.axvspan(pd.Timestamp("2020-03-01"), pd.Timestamp("2020-07-01"), color=COLOR_2, alpha=0.15)
+plt.text(pd.Timestamp("2020-03-15"), 600, "Confinamiento\nmar-jun 2020", color="#333333", fontsize=9)
+plt.title("Denuncias de violencia intrafamiliar registradas por mes (2008-2023)")
+plt.xlabel("Mes de registro")
+plt.ylabel("Número de denuncias")
+plt.ylim(0, mensual.max() * 1.1)
+plt.gca().yaxis.set_major_formatter(miles)
+plt.legend(loc="lower left")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: tabla-pandemia
+#| output: asis
+pandemia = pd.DataFrame({"Mes": [m[:3].capitalize() for m in meses[2:8]],
+                         "Promedio 2017-2019": esperado.loc[3:8].round(0).astype(int).values,
+                         "2020": tabla_mes.loc[2020, 3:8].values,
+                         "Cambio 2020 (%)": cambio_2020.loc[3:8].values})
+tabla(pandemia)
+```
+
+```{python}
+#| label: tendencia-tipos
+tipos_anio = df_limpio[list(tipos.values())].eq("presente").groupby(df_limpio["ANO_EMISION"]).mean().mul(100)
+tipos_anio.columns = list(tipos.keys())
+tipos_anio.index = tipos_anio.index.astype(int)
+
+colores_tipo = {"Psicológica": COLOR, "Física": COLOR_2, "Patrimonial": COLOR_3, "Sexual": COLOR_4}
+plt.figure(figsize=(11, 4.6))
+for tipo, color in colores_tipo.items():
+    plt.plot(tipos_anio.index, tipos_anio[tipo], color=color, linewidth=2, marker="o", markersize=4, label=tipo)
+    plt.text(tipos_anio.index[-1] + 0.3, tipos_anio[tipo].iloc[-1], f"{tipo} {tipos_anio[tipo].iloc[-1]:.0f} %",
+             va="center", fontsize=9, color="#333333")
+plt.title("Porcentaje de denuncias que incluyen cada tipo de violencia, por año")
+plt.xlabel("Año de registro")
+plt.ylabel("Denuncias con ese tipo de violencia (%)")
+plt.ylim(0, 100)
+plt.xlim(2007.5, 2026.5)
+plt.xticks(tipos_anio.index, rotation=45)
+plt.legend(loc="center", bbox_to_anchor=(0.45, 0.33), ncol=4)
+plt.tight_layout()
+plt.show()
+```
+
+- La serie tiene tres fases: un **máximo en 2009-2011**, un **descenso gradual hasta 2018-2019** y una **recuperación desde 2021**.
+- **Pandemia**: de marzo a junio de 2020 las denuncias cayeron entre `{r} pyv("pct(caida_min, 0)")` y `{r} pyv("pct(caida_max, 0)")` respecto al promedio de 2017-2019, durante las restricciones de movilidad. Con la víctima encerrada junto al agresor, la caída casi con seguridad **no significa menos violencia**.
+- **La física pierde peso** (de `{r} pyv("pct(tipos_anio.loc[2008, 'Física'], 0)")` a `{r} pyv("pct(tipos_anio.loc[2023, 'Física'], 0)")`) **y la psicológica gana** (de `{r} pyv("pct(tipos_anio.loc[2008, 'Psicológica'], 0)")` a `{r} pyv("pct(tipos_anio.loc[2023, 'Psicológica'], 0)")`). Lo más probable es que cada vez más víctimas denuncien sin esperar a la agresión física, tras la difusión de la Ley contra el Femicidio (2008).
+
+## Diferencias territoriales {#territorio}
+
+Para comparar departamentos se calcula la **tasa media anual de denuncias por cada 100 mil habitantes** según el departamento del hecho. Se usa la población del **Censo 2018** del INE, tomada como constante para todo el periodo (una aproximación).
+
+```{python}
+#| label: tasas-departamento
+#| fig-height: 6.5
+poblacion_2018 = {  # INE, XII Censo Nacional de Población 2018
+    "guatemala": 3015081, "alta verapaz": 1215038, "huehuetenango": 1170669, "san marcos": 1032277,
+    "quiche": 949261, "quetzaltenango": 799101, "escuintla": 733181, "chimaltenango": 615776,
+    "suchitepequez": 554695, "peten": 545600, "jutiapa": 488395, "solola": 421583,
+    "totonicapan": 418569, "chiquimula": 415063, "izabal": 408688, "santa rosa": 396607,
+    "jalapa": 342923, "sacatepequez": 330469, "retalhuleu": 326828, "baja verapaz": 299476,
+    "zacapa": 245374, "el progreso": 176632,
+}
+(pd.Series(poblacion_2018, name="POBLACION_2018").rename_axis("HEC_DEPTO").reset_index()
+ .to_csv("data/poblacion_departamentos_2018.csv", index=False))
+
+nombre_depto = {"quiche": "Quiché", "peten": "Petén", "solola": "Sololá", "totonicapan": "Totonicapán",
+                "sacatepequez": "Sacatepéquez", "suchitepequez": "Suchitepéquez"}
+anios = df_limpio["ANO_EMISION"].nunique()
+
+territorio = (df_limpio[df_limpio["HEC_DEPTO"].isin(poblacion_2018.keys())]
+              .groupby("HEC_DEPTO")
+              .agg(denuncias=("VIC_SEXO", "size"),
+                   pct_indigena=("VIC_ES_INDIGENA", lambda s: s.eq("si").mean() * 100),
+                   pct_rural=("HEC_AREA", lambda s: s.eq("rural").mean() * 100)))
+territorio["poblacion"] = territorio.index.map(poblacion_2018)
+territorio["tasa_100k"] = territorio["denuncias"] / anios / territorio["poblacion"] * 1e5
+territorio.index = [nombre_depto.get(d, d.title()) for d in territorio.index]
+territorio = territorio.sort_values("tasa_100k")
+media_nacional = len(df_limpio) / anios / sum(poblacion_2018.values()) * 1e5
+
+plt.figure(figsize=(9, 6.5))
+plt.barh(territorio.index, territorio["tasa_100k"], color=COLOR)
+plt.axvline(media_nacional, color="#333333", linestyle="--", linewidth=1)
+plt.text(media_nacional + 5, 0, f"Nacional: {media_nacional:.0f}", fontsize=9, color="#333333")
+plt.title("Tasa media anual de denuncias por departamento del hecho (2008-2023)")
+plt.xlabel("Denuncias por cada 100 mil habitantes al año")
+plt.ylabel("Departamento")
+plt.tight_layout()
+plt.show()
+
+
+def tasa(d):
+    return fmt(territorio.loc[d, "tasa_100k"])
+
+
+rho_terr, p_terr = stats.spearmanr(territorio["pct_indigena"], territorio["tasa_100k"])
+```
+
+- Con tasas, el orden cambia respecto a los conteos absolutos. **El Progreso (`{r} pyv("tasa('El Progreso')")`), Sacatepéquez (`{r} pyv("tasa('Sacatepéquez')")`) y Retalhuleu (`{r} pyv("tasa('Retalhuleu')")`)** encabezan, muy por encima de la media nacional (`{r} pyv("fmt(media_nacional)")`). Guatemala, primera en conteos, queda cerca de la media (`{r} pyv("tasa('Guatemala')")`).
+- Las tasas más bajas están en **Quiché (`{r} pyv("tasa('Quiché')")`), Huehuetenango (`{r} pyv("tasa('Huehuetenango')")`) y Totonicapán (`{r} pyv("tasa('Totonicapán')")`)**, departamentos del altiplano mayoritariamente indígenas y rurales. No hay una relación lineal entre la tasa y el porcentaje de víctimas indígenas (Spearman $\rho$ = `{r} pyv("fmt(rho_terr, 2)")`, p = `{r} pyv("fmt(p_terr, 2)")`, n = 22; Anexo F). Alta Verapaz, mayoritariamente indígena y con una tasa alta (`{r} pyv("tasa('Alta Verapaz')")`), es la excepción.
+- Una tasa baja probablemente refleja **barreras para denunciar** (distancia a juzgados, atención solo en español, mecanismos comunitarios, desconfianza), no menos violencia.
+
+## Modelo: factores asociados a la violencia física
+
+Las comparaciones simples muestran que la violencia física es más frecuente en víctimas con menos escolaridad, indígenas y del área rural (Anexo A). Pero esas tres variables están relacionadas entre sí. Para separar sus efectos se ajusta una **regresión logística** con la presencia de violencia física como variable respuesta y como predictores la escolaridad, el pueblo, el área, la relación con el agresor (agrupada), el rango de edad, el sexo de la víctima y el año.
+
+```{python}
+#| label: datos-modelo
+# Preparación en Python: casos completos (sin "ignorado") y relación agrupada en 5 categorías
+grupo_relacion = {
+    "esposos(as)": "Pareja actual", "conviviente": "Pareja actual", "ex-conyuges": "Expareja",
+    "padres/madres": "Hijo(a) o yerno/nuera agrede", "suegros(as)": "Hijo(a) o yerno/nuera agrede",
+    "hijos(as)": "Padre/madre o abuelo(a) agrede", "hijastros(as)": "Padre/madre o abuelo(a) agrede",
+    "nietos(as)": "Padre/madre o abuelo(a) agrede",
+    "hermanos(as)": "Otro familiar", "otro pariente": "Otro familiar",
+}
+predictores = {"VIC_NIV_ESCOLARIDAD": "escolaridad", "VIC_ES_INDIGENA": "indigena", "HEC_AREA": "area",
+               "VIC_RANGO_EDAD": "edad", "VIC_SEXO": "sexo", "VIC_REL_AGR": "relacion"}
+base = df_limpio[list(predictores) + ["VIOLENCIA_FISICA", "ANO_EMISION"]]
+completos = ~base[list(predictores)].isin(["ignorado"]).any(axis=1)
+datos_modelo = base[completos].rename(columns=predictores)
+datos_modelo["relacion"] = datos_modelo["relacion"].map(grupo_relacion)
+datos_modelo["fisica"] = datos_modelo.pop("VIOLENCIA_FISICA").eq("presente").astype(int)
+datos_modelo["anios"] = datos_modelo.pop("ANO_EMISION") - 2008
+datos_modelo = datos_modelo.astype({c: object for c in predictores.values()}).reset_index(drop=True)
+pct_completos = completos.mean() * 100
+```
+
+```{r}
+#| label: modelo
+# Modelado en R: lee los datos preparados en Python
+d <- py$datos_modelo
+d[] <- lapply(d, function(x) if (is.character(x)) factor(x) else x)
+d$escolaridad <- factor(d$escolaridad, levels = c("ninguno", "primaria", "basicos", "diversificado", "universidad"))
+d$indigena <- relevel(d$indigena, "no")
+d$area <- relevel(d$area, "urbana")
+d$edad <- factor(d$edad, levels = c("adulto joven", "ninio", "adolescente", "adulto medio", "adulto mayor"))
+d$sexo <- relevel(d$sexo, "hombres")
+d$relacion <- relevel(d$relacion, "Pareja actual")
+
+set.seed(2026)
+en_entrenamiento <- sample(nrow(d), size = round(0.7 * nrow(d)))
+entrenamiento <- d[en_entrenamiento, ]
+prueba <- d[-en_entrenamiento, ]
+
+modelo <- glm(fisica ~ escolaridad + indigena + area + relacion + edad + sexo + anios,
+              data = entrenamiento, family = binomial)
+
+# Evaluación en el conjunto de prueba
+prob <- predict(modelo, prueba, type = "response")
+pred <- as.integer(prob >= 0.5)
+obs <- prueba$fisica
+auc <- function(y, p) {  # AUC = probabilidad de que un positivo tenga mayor puntaje que un negativo
+  r <- rank(p); n1 <- as.numeric(sum(y == 1)); n0 <- as.numeric(sum(y == 0))
+  (sum(r[y == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
+}
+metricas <- c(
+  AUC = auc(obs, prob),
+  Exactitud = mean(pred == obs),
+  `Exactitud de referencia (clase mayoritaria)` = max(mean(obs), 1 - mean(obs)),
+  Sensibilidad = mean(pred[obs == 1] == 1),
+  Especificidad = mean(pred[obs == 0] == 0),
+  `Pseudo-R² de McFadden` = 1 - modelo$deviance / modelo$null.deviance
+)
+
+# Razones de momios (odds ratios) con IC de Wald al 95 %
+or <- exp(cbind(coef(modelo), confint.default(modelo)))[-1, ]
+colnames(or) <- c("or", "inf", "sup")
+or <- data.frame(termino = rownames(or), or, row.names = NULL)
+OR <- function(t, d = 2) num(or$or[or$termino == t], d)
+```
+
+```{r}
+#| label: forest-plot
+#| fig-height: 6.5
+#| fig-width: 9
+etiquetas <- c(
+  escolaridadprimaria = "Escolaridad: primaria", escolaridadbasicos = "Escolaridad: básicos",
+  escolaridaddiversificado = "Escolaridad: diversificado", escolaridaduniversidad = "Escolaridad: universidad",
+  indigenasi = "Víctima indígena", arearural = "Área rural",
+  `relacionExpareja` = "Relación: expareja",
+  `relacionHijo(a) o yerno/nuera agrede` = "Relación: hijo(a) o yerno/nuera agrede",
+  `relacionPadre/madre o abuelo(a) agrede` = "Relación: padre/madre o abuelo(a) agrede",
+  `relacionOtro familiar` = "Relación: otro familiar",
+  edadninio = "Edad: niñez (1-13)", edadadolescente = "Edad: adolescencia (14-18)",
+  `edadadulto medio` = "Edad: adulto medio (41-60)", `edadadulto mayor` = "Edad: adulto mayor (61+)",
+  sexomujeres = "Víctima mujer", anios = "Cada año desde 2008"
+)
+or$etiqueta <- factor(etiquetas[or$termino], levels = rev(etiquetas[or$termino]))
+
+ggplot(or, aes(x = or, y = etiqueta, xmin = inf, xmax = sup)) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = "#333333") +
+  geom_pointrange(colour = "#2a78d6", size = 0.35) +
+  geom_text(aes(label = sprintf("%.2f", or)), nudge_y = 0.35, size = 3, colour = "#333333") +
+  scale_x_log10() +
+  labs(title = "Razón de momios de violencia física (regresión logística)",
+       subtitle = "Referencias: sin escolaridad, no indígena, urbana, pareja actual,\nadulto joven (19-40), víctima hombre",
+       x = "Razón de momios (escala logarítmica; > 1 = más probable)", y = NULL) +
+  theme_minimal(base_size = 11) +
+  theme(plot.title = element_text(face = "bold"), panel.grid.minor = element_blank())
+```
+
+```{r}
+#| label: tabla-metricas
+#| output: asis
+knitr::kable(data.frame(Métrica = names(metricas), Valor = unname(num(metricas, 3))),
+             caption = "Evaluación del modelo en el conjunto de prueba (30 %)", align = c("l", "r"))
+```
+
+El modelo usa `{r} num(nrow(d), 0)` denuncias con todos los datos (`{r} pyv("pct(pct_completos, 0)")` del total). Una razón de momios (*odds ratio*) mayor que 1 indica que la violencia física es más probable que en la categoría de referencia, manteniendo constantes las demás variables.
+
+- **El gradiente educativo se mantiene**: frente a una víctima sin escolaridad, tener universidad reduce los momios de violencia física a `{r} OR("escolaridaduniversidad")` veces.
+- **Ser indígena** (`{r} OR("indigenasi")`) y **vivir en área rural** (`{r} OR("arearural")`) siguen asociados a más violencia física, aun a igual escolaridad.
+- **La pareja actual es el contexto de mayor violencia física**: con cualquier otro vínculo los momios son menores, sobre todo con una **expareja** (`{r} OR("relacionExpareja")`). Sin convivencia, la violencia toma otras formas.
+- **El sexo y la edad de la víctima son los efectos más grandes**: ser mujer (`{r} OR("sexomujeres")`), niña o niño (`{r} OR("edadninio")`) o adolescente (`{r} OR("edadadolescente")`) aumenta los momios de violencia física; ser adulto mayor los reduce (`{r} OR("edadadulto mayor")`).
+- **La tendencia se confirma**: cada año los momios de violencia física bajan un `{r} num((1 - or$or[or$termino == "anios"]) * 100, 0)` %, aun descontando los cambios en el perfil de las víctimas.
+- **Poder predictivo modesto**: el AUC es de `{r} num(metricas["AUC"])` (0.5 equivale al azar), y la exactitud (`{r} num(metricas["Exactitud"] * 100, 1)` %) supera por poco a la de predecir siempre la clase mayoritaria (`{r} num(metricas[3] * 100, 1)` %). Es coherente con las asociaciones débiles de la V de Cramér: el perfil de la víctima no basta para anticipar el tipo de violencia. Con este tamaño de muestra todos los efectos son estadísticamente significativos, así que lo importante es su **magnitud**, no el valor p.
+
+# Discusión
+
+| Hallazgo | Evidencia | Interpretación |
+|---|---|---|
+| Violencia de género y de pareja | Mujer víctima y hombre agresor en el `{r} pyv("pct(pct_mujer_hombre, 0)")`; pareja o expareja en el `{r} pyv("pct(pct_pareja, 0)")` | Dos fenómenos distintos (pareja y entre generaciones) que conviene analizar por separado |
+| La violencia física pierde peso | `{r} pyv("pct(tipos_anio.loc[2008, 'Física'], 0)")` a `{r} pyv("pct(tipos_anio.loc[2023, 'Física'], 0)")` (2008-2023); razón de momios anual `{r} OR("anios")` en el modelo | Cambio en **qué se denuncia**; no prueba que haya menos violencia física |
+| Riesgo sexual en niñas | `{r} pyv("pct(sexual_ninas, 0)")` en niñas menores de 14 vs. `{r} pyv("pct(sexual_adultas, 0)")` en adultas jóvenes | Grupo prioritario; cifra subestimada |
+| Caída en el confinamiento | De -`{r} pyv("pct(caida_min, 0)")` a -`{r} pyv("pct(caida_max, 0)")` (marzo-junio de 2020) | Efecto de acceso a denunciar |
+| Tasas bajas en el altiplano | Quiché `{r} pyv("tasa('Quiché')")` vs. nacional `{r} pyv("fmt(media_nacional)")` por 100 mil | Hipótesis de **subregistro**, por confirmar con datos externos (ENSMI, juzgados por departamento) |
+| Gradiente social en la violencia física | Razón de momios con universidad `{r} OR("escolaridaduniversidad")`; indígena `{r} OR("indigenasi")` | Efectos independientes pero pequeños; puede ser más violencia o una denuncia más tardía |
+
+**Limitaciones del análisis.** (1) Los datos son denuncias, no prevalencia. (2) La población departamental es la de 2018 para todo el periodo. (3) El modelo es asociativo, no causal, y deja fuera el `{r} pyv("pct(100 - pct_completos, 0)")` de casos con datos ignorados, que pueden diferir del resto. (4) Los tipos de violencia los registra la institución que recibe la denuncia y su criterio puede variar.
+
+# Conclusiones
+
+1. **Perfil.** La violencia intrafamiliar denunciada en Guatemala es, sobre todo, **violencia de hombres contra mujeres en la pareja**. Junto a ella existe una violencia **entre generaciones** que explica buena parte de las víctimas hombres. La psicológica está casi siempre presente y la sexual se concentra en **niñas**.
+2. **Tiempo.** Las denuncias alcanzaron su máximo en 2009-2011, cayeron con fuerza en el **confinamiento de 2020** y se recuperan desde 2021. Cada vez se denuncia más violencia psicológica sin violencia física.
+3. **Territorio.** Con tasas por población, los departamentos pequeños y cercanos a la capital encabezan, y el **altiplano indígena** tiene las tasas más bajas, muy probablemente por **barreras de acceso a la justicia**.
+4. **Factores asociados.** El sexo y la edad de la víctima, la convivencia en pareja, la escolaridad y el pueblo se asocian de forma independiente a la violencia física, pero en conjunto predicen poco (AUC de `{r} num(metricas["AUC"])`).
+
+Lo más relevante que muestra este dataset es **quién llega a denunciar y quién no**. Mejorar el acceso a la denuncia en el área rural e indígena es tan importante como atender los casos que ya se registran.
+
+# Referencias {.unnumbered}
+
+- Congreso de la República de Guatemala (1996). *Decreto 97-96: Ley para Prevenir, Sancionar y Erradicar la Violencia Intrafamiliar*.
+- Congreso de la República de Guatemala (2008). *Decreto 22-2008: Ley contra el Femicidio y otras Formas de Violencia contra la Mujer*.
+- Congreso de la República de Guatemala (2017). *Decreto 13-2017: reformas al Código Civil (prohibición del matrimonio de menores de 18 años)*.
+- DieggsPapu (2025). *Violencia Intrafamiliar en Guatemala INE 2008-2023* [conjunto de datos, versión 11]. Kaggle. <https://www.kaggle.com/datasets/dieggspapu/violencia-intrafamiliar-en-guatemala-ine-2008-2023>
+- Instituto Nacional de Estadística de Guatemala (2019). *XII Censo Nacional de Población y VII de Vivienda 2018*. <https://www.censopoblacion.gt/>
+- Instituto Nacional de Estadística de Guatemala. *Estadísticas de violencia intrafamiliar*. <https://www.ine.gob.gt/>
+- R Core Team (2025). *R: A Language and Environment for Statistical Computing*. R Foundation for Statistical Computing.
+- Ushey, K., Allaire, J. J. y Tang, Y. *reticulate: Interface to Python*. <https://rstudio.github.io/reticulate/>
+
+# Anexos {.unnumbered}
+
+## A. Perfil social de la víctima y violencia física {.unnumbered}
+
+```{python}
+#| label: perfil-fisica
+fisica = df_limpio["VIOLENCIA_FISICA"].eq("presente")
+
+esc = fisica.groupby(df_limpio["VIC_NIV_ESCOLARIDAD"]).mean().mul(100)
+esc = esc.loc[["ninguno", "primaria", "basicos", "diversificado", "universidad"]]
+esc.index = ["Ninguna", "Primaria", "Básicos", "Diversificado", "Universidad"]
+etn = fisica.groupby(df_limpio["VIC_ES_INDIGENA"]).mean().mul(100).loc[["si", "no"]]
+etn.index = ["Indígena", "No indígena"]
+area = fisica.groupby(df_limpio["HEC_AREA"]).mean().mul(100).loc[["rural", "urbana"]]
+area.index = ["Rural", "Urbana"]
+
+fig, ejes = plt.subplots(1, 3, figsize=(11, 4.2), sharey=True,
+                         gridspec_kw={"width_ratios": [5, 2, 2]})
+for ax, serie, titulo in zip(ejes, [esc, etn, area],
+                             ["Escolaridad de la víctima", "Pueblo de la víctima", "Área del hecho"]):
+    ax.bar(serie.index, serie.values, color=COLOR, width=0.6)
+    for i, v in enumerate(serie.values):
+        ax.text(i, v + 1, f"{v:.1f} %", ha="center", fontsize=9)
+    ax.set_title(titulo)
+    ax.set_ylim(0, 80)
+    ax.tick_params(axis="x", rotation=20)
+ejes[0].set_ylabel("Denuncias con violencia física (%)")
+fig.suptitle("Porcentaje de denuncias con violencia física según el perfil de la víctima", fontweight="bold")
+plt.tight_layout()
+plt.show()
+```
+
+La violencia física baja al subir la escolaridad (de `{r} pyv("pct(esc['Ninguna'], 0)")` sin escolaridad a `{r} pyv("pct(esc['Universidad'], 0)")` con universidad). También es más frecuente en víctimas indígenas (`{r} pyv("pct(etn['Indígena'], 0)")` frente a `{r} pyv("pct(etn['No indígena'], 0)")`) y en el área rural (`{r} pyv("pct(area['Rural'], 0)")` frente a `{r} pyv("pct(area['Urbana'], 0)")`). El modelo de la sección de resultados separa estos efectos.
+
+## B. Edades de víctima y agresor en parejas {.unnumbered}
+
+```{python}
+#| label: edades-pareja
+#| fig-height: 4.8
+parejas_hm = df_limpio[pareja
+                       & (df_limpio["VIC_SEXO"] == "mujeres")
+                       & (df_limpio["AGR_SEXO"] == "hombres")].dropna(subset=["VIC_EDAD", "AGR_EDAD"])
+dif = parejas_hm["DIF_EDAD"]
+r_pareja = stats.pearsonr(parejas_hm["VIC_EDAD"], parejas_hm["AGR_EDAD"])[0]
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.8), gridspec_kw={"width_ratios": [1, 1.3]})
+hb = ax1.hexbin(parejas_hm["VIC_EDAD"], parejas_hm["AGR_EDAD"], gridsize=60, bins="log",
+                cmap=AZULES, mincnt=1, extent=(10, 90, 10, 90))
+ax1.plot([10, 90], [10, 90], color="#333333", linestyle="--", linewidth=1)
+fig.colorbar(hb, ax=ax1, label="Denuncias (escala log.)")
+ax1.set_title("Edad de la víctima vs. del agresor\n(mujer víctima, hombre agresor)")
+ax1.set_xlabel("Edad de la víctima (años)")
+ax1.set_ylabel("Edad del agresor (años)")
+
+ax2.hist(dif.clip(-20, 30), bins=range(-20, 32), color=COLOR, edgecolor="white")
+ax2.axvline(0, color="#333333", linestyle="--", linewidth=1)
+ax2.set_title("Edad del agresor menos edad de la víctima")
+ax2.set_xlabel("Diferencia de edad (años; extremos agrupados en -20 y 30)")
+ax2.set_ylabel("Número de denuncias")
+ax2.yaxis.set_major_formatter(miles)
+plt.tight_layout()
+plt.show()
+```
+
+En las parejas las edades están muy correlacionadas (r = `{r} pyv("fmt(r_pareja, 2)")`). El agresor es mayor que la víctima en el `{r} pyv("pct((dif > 0).mean() * 100)")` de los casos, con una diferencia mediana de `{r} pyv("fmt(dif.median())")` años, y le lleva 10 años o más en el `{r} pyv("pct((dif >= 10).mean() * 100)")`. Los picos en 0, 5 y 10 años sugieren redondeo de edades.
+
+## C. Tipo de violencia según la relación {.unnumbered}
+
+```{python}
+#| label: tipo-relacion
+#| fig-height: 6
+tipos_rel = (df_limpio[list(tipos.values())].eq("presente")
+             .groupby(df_limpio["VIC_REL_AGR"]).mean().mul(100))
+tipos_rel.columns = list(tipos.keys())
+tipos_rel = tipos_rel.loc[df_limpio["VIC_REL_AGR"].value_counts().index]
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(tipos_rel, annot=True, fmt=".1f", cmap=AZULES, vmin=0, vmax=100,
+            linewidths=1, linecolor="white", cbar_kws={"label": "% de denuncias con ese tipo"})
+plt.title("Presencia de cada tipo de violencia según la relación (%)")
+plt.xlabel("Tipo de violencia")
+plt.ylabel("La víctima es ... del agresor\n(de más a menos frecuente)")
+plt.tight_layout()
+plt.show()
+
+
+def tr(rel, tipo):
+    return pct(tipos_rel.loc[rel, tipo], 0)
+```
+
+La física es mayor en las parejas actuales (`{r} pyv("tr('conviviente', 'Física')")` en convivientes) que en las exparejas (`{r} pyv("tr('ex-conyuges', 'Física')")`). La sexual sube cuando la víctima es hijastra(o) (`{r} pyv("tr('hijastros(as)', 'Sexual')")`), nieta(o) (`{r} pyv("tr('nietos(as)', 'Sexual')")`) o hija(o) (`{r} pyv("tr('hijos(as)', 'Sexual')")`) del agresor. La patrimonial destaca cuando un hijo agrede a sus padres (`{r} pyv("tr('padres/madres', 'Patrimonial')")`).
+
+## D. Autonomía económica, hijos y reincidencia {.unnumbered}
+
+```{python}
+#| label: autonomia
+patrimonial = df_limpio["VIOLENCIA_PATRIMONIAL"].eq("presente")
+pat_trabajo = patrimonial.groupby(df_limpio["VIC_TRABAJA"]).mean().mul(100).loc[["si", "no"]]
+pat_trabajo.index = ["Trabaja", "No trabaja"]
+
+reinc = df_limpio[df_limpio["HEC_RECUR_DENUN"].isin(["si", "no"])]
+reinc_hijos = (reinc["HEC_RECUR_DENUN"].eq("si")
+               .groupby(reinc["TOTAL_HIJOS"].clip(upper=6)).mean().mul(100))
+reinc_hijos.index = [str(int(i)) if i < 6 else "6 o más" for i in reinc_hijos.index]
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.3), gridspec_kw={"width_ratios": [1, 2.2]})
+ax1.bar(pat_trabajo.index, pat_trabajo.values, color=COLOR, width=0.55)
+for i, v in enumerate(pat_trabajo.values):
+    ax1.text(i, v + 0.3, f"{v:.1f} %", ha="center", fontsize=9)
+ax1.set_title("Violencia patrimonial\nsegún situación laboral")
+ax1.set_ylabel("Denuncias con violencia patrimonial (%)")
+ax1.set_xlabel("Situación laboral de la víctima")
+ax1.set_ylim(0, 20)
+
+ax2.bar(reinc_hijos.index, reinc_hijos.values, color=COLOR, width=0.6)
+for i, v in enumerate(reinc_hijos.values):
+    ax2.text(i, v + 0.3, f"{v:.1f} %", ha="center", fontsize=9)
+ax2.set_title("Denuncias reincidentes\nsegún el número de hijos de la víctima")
+ax2.set_ylabel("Denuncias reincidentes (%)")
+ax2.set_xlabel("Número de hijos")
+ax2.set_ylim(0, 20)
+plt.tight_layout()
+plt.show()
+```
+
+Contra lo esperado, las víctimas que **trabajan** reportan **más** violencia patrimonial (`{r} pyv("pct(pat_trabajo['Trabaja'])")` frente a `{r} pyv("pct(pat_trabajo['No trabaja'])")`): con ingresos propios hay más que controlar o quitar. Las denuncias reincidentes suben con el número de hijos, del `{r} pyv("pct(reinc_hijos['0'])")` sin hijos al `{r} pyv("pct(reinc_hijos['6 o más'])")` con seis o más, algo coherente con un vínculo que se mantiene a través de los hijos.
+
+## E. Patrones del calendario {.unnumbered #calendario}
+
+```{python}
+#| label: semana-mes
+dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+por_dia = df_limpio["DIA_SEMANA"].value_counts(normalize=True).sort_index().mul(100)
+
+# Índice de hechos por fecha del año (100 = día mediano). Los días 1 y 15 están inflados por redondeo.
+por_fecha = df_limpio["FECHA_HECHO"].dt.strftime("%d-%m").value_counts().drop("29-02")
+indice = por_fecha / por_fecha.median() * 100
+dia = indice.index.str[:2]
+festivos = {"01-01": "Año Nuevo", "10-05": "Día de la Madre", "02-11": "Día de Difuntos",
+            "15-09": "Independencia", "25-12": "Navidad"}
+fest = indice[list(festivos)].rename(festivos)
+referencia = pd.Series({
+    "Promedio días 1": indice[(dia == "01") & (indice.index != "01-01")].mean(),
+    "Promedio días 15": indice[dia == "15"].mean(),
+    "Promedio resto de días": indice[~dia.isin(["01", "15"])].mean(),
+})
+grafica = pd.concat([fest.sort_values(), referencia.sort_values()])
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4.3))
+ax1.bar(dias, por_dia.values, color=COLOR, width=0.6)
+ax1.axhline(100 / 7, color="#333333", linestyle="--", linewidth=1, label="Reparto uniforme (1/7)")
+ax1.legend(loc="lower right")
+ax1.set_title("Hechos según el día de la semana")
+ax1.set_ylabel("Porcentaje de hechos (%)")
+ax1.set_ylim(0, 20)
+ax1.tick_params(axis="x", rotation=20)
+
+ax2.barh(grafica.index, grafica.values, color=[COLOR] * len(fest) + ["#b8b7b1"] * len(referencia))
+for y_, v in enumerate(grafica.values):
+    ax2.text(v + 1.5, y_, f"{v:.0f}", va="center", fontsize=9)
+ax2.axvline(100, color="#333333", linestyle="--", linewidth=1)
+ax2.set_title("Hechos en fechas festivas\n(índice, día mediano = 100)")
+ax2.set_xlim(0, 190)
+plt.tight_layout()
+plt.show()
+```
+
+Los hechos se concentran en **domingo (`{r} pyv("pct(por_dia[6])")`) y lunes (`{r} pyv("pct(por_dia[0])")`)**; con un reparto uniforme cada día tendría 14.3 %. Los días 1 y 15 están inflados por **redondeo de fechas** (índices de `{r} pyv("fmt(referencia['Promedio días 1'])")` y `{r} pyv("fmt(referencia['Promedio días 15'])")`, frente a `{r} pyv("fmt(referencia['Promedio resto de días'])")` del resto). Aun así destacan **Año Nuevo** (`{r} pyv("fmt(indice['01-01'])")`), el **Día de la Madre** (`{r} pyv("fmt(indice['10-05'])")`) y el **Día de Difuntos** (`{r} pyv("fmt(indice['02-11'])")`), celebraciones familiares con consumo de alcohol.
+
+## F. Tasa de denuncias y porcentaje de víctimas indígenas {.unnumbered}
+
+```{python}
+#| label: tasa-indigena
+#| fig-height: 5.5
+plt.figure(figsize=(9, 5.5))
+plt.scatter(territorio["pct_indigena"], territorio["tasa_100k"], s=territorio["poblacion"] / 8000,
+            color=COLOR, alpha=0.7, edgecolor="white", linewidth=1.5)
+desplazar = {"Jalapa": (-8, -14), "Guatemala": (10, 6), "San Marcos": (6, -10)}
+for depto, fila in territorio.iterrows():
+    plt.annotate(depto, (fila["pct_indigena"], fila["tasa_100k"]), fontsize=8,
+                 xytext=desplazar.get(depto, (5, 4)), textcoords="offset points", color="#333333")
+plt.title("Tasa de denuncias vs. porcentaje de víctimas indígenas por departamento")
+plt.xlabel("Víctimas que se identifican como indígenas (% de las denuncias del departamento)")
+plt.ylabel("Denuncias por cada 100 mil habitantes al año")
+plt.xlim(-3, 100)
+plt.ylim(0, territorio["tasa_100k"].max() * 1.1)
+plt.text(99, 15, "Tamaño del punto = población", ha="right", fontsize=8, color=GRIS)
+plt.tight_layout()
+plt.show()
+```
+
+## G. Víctimas hombres por año {.unnumbered}
+
+```{python}
+#| label: tendencia-hombres
+hombres_anio = df_limpio["VIC_SEXO"].eq("hombres").groupby(df_limpio["ANO_EMISION"]).mean().mul(100)
+hombres_anio.index = hombres_anio.index.astype(int)
+
+plt.figure(figsize=(10, 3.8))
+plt.plot(hombres_anio.index, hombres_anio.values, color=COLOR, linewidth=2, marker="o", markersize=5)
+for a in [2008, 2016, 2023]:
+    plt.text(a, hombres_anio[a] + 0.8, f"{hombres_anio[a]:.1f} %", ha="center", fontsize=9)
+plt.title("Porcentaje de víctimas hombres por año")
+plt.xlabel("Año de registro")
+plt.ylabel("Víctimas hombres (%)")
+plt.ylim(0, 20)
+plt.xticks(hombres_anio.index, rotation=45)
+plt.tight_layout()
+plt.show()
+```
+
+Las víctimas hombres pasaron del `{r} pyv("pct(hombres_anio.loc[2010:2013].mean(), 0)")` en 2010-2013 al `{r} pyv("pct(hombres_anio[2023], 0)")` en 2023. Puede reflejar más violencia contra hombres o menos reparo para denunciar; muchos casos son violencia entre generaciones.
+
+## H. Respuesta institucional {.unnumbered}
+
+```{python}
+#| label: instituciones
+inst_anio = pd.crosstab(df_limpio["ANO_EMISION"], df_limpio["INST_DENUN_HECHO"], normalize="index").mul(100)
+inst_anio.index = inst_anio.index.astype(int)
+
+plt.figure(figsize=(10, 4.2))
+for inst, color, nombre in [("organismo judicial", COLOR, "Organismo Judicial"),
+                            ("policia nacional civil", COLOR_2, "Policía Nacional Civil"),
+                            ("ministerio publico", COLOR_3, "Ministerio Público")]:
+    plt.plot(inst_anio.index, inst_anio[inst], color=color, linewidth=2, marker="o", markersize=4, label=nombre)
+plt.title("Institución que recibe la denuncia, por año")
+plt.xlabel("Año de registro")
+plt.ylabel("Porcentaje de denuncias (%)")
+plt.ylim(0, 70)
+plt.xticks(inst_anio.index, rotation=45)
+plt.legend(loc="center", bbox_to_anchor=(0.5, 0.3), ncol=3)
+plt.tight_layout()
+plt.show()
+
+pnc = inst_anio["policia nacional civil"]
+inst_area = pd.crosstab(df_limpio["HEC_AREA"], df_limpio["INST_DENUN_HECHO"], normalize="index").mul(100)
+con_dato = df_limpio[df_limpio["MEDIDAS_SEGURIDAD"] != "ignorado"]
+pct_medidas = con_dato["MEDIDAS_SEGURIDAD"].eq("medidas otorgadas").mean() * 100
+pct_con_dato = len(con_dato) / len(df_limpio) * 100
+```
+
+El **Organismo Judicial** recibe la mayoría de las denuncias. En la pandemia ganó peso la **PNC** (`{r} pyv("pct(pnc[2018], 0)")` en 2018, `{r} pyv("pct(pnc[2020], 0)")` en 2020), que también recibe más denuncias en el área rural (`{r} pyv("pct(inst_area.loc['rural', 'policia nacional civil'], 0)")` frente a `{r} pyv("pct(inst_area.loc['urbana', 'policia nacional civil'], 0)")`). Las medidas de seguridad se otorgan en el `{r} pyv("pct(pct_medidas, 0)")` de los casos con dato, pero ese dato existe solo en el `{r} pyv("pct(pct_con_dato, 0)")` de los registros.
+
+## I. Entorno de ejecución {.unnumbered}
+
+```{r}
+#| label: entorno
+#| results: markup
+cat("R:", R.version.string, "\n")
+cat("Python:", py_eval("__import__('platform').python_version()"), "| pandas", py_eval("pd.__version__"), "| matplotlib", py_eval("__import__('matplotlib').__version__"), "\n")
+cat("Paquetes de R: reticulate", as.character(packageVersion("reticulate")),
+    "| ggplot2", as.character(packageVersion("ggplot2")),
+    "| knitr", as.character(packageVersion("knitr")), "\n")
+```
