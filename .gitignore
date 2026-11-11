@@ -1,0 +1,11 @@
+# Datos pesados: se descargan de Kaggle (ver README) o los genera el informe
+data/violencia_intrafamiliar_gt.csv
+data/violencia_limpia.csv
+
+# Entornos y archivos temporales
+.venv/
+.quarto/
+*_files/
+.Rhistory
+.RData
+__pycache__/
