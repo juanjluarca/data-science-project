@@ -9,6 +9,15 @@ Proyecto final del curso de Ciencia de Datos. Analiza 590,672 denuncias de viole
 3. ¿Qué diferencias hay entre departamentos al ajustar por población?
 4. ¿Qué características de la víctima y del vínculo con el agresor se asocian a la violencia física?
 
+## Integrantes y división de tareas
+
+| Integrante | Rol | Tareas |
+|---|---|---|
+| Juan Luarca | Informe de Quarto | Limpieza y transformación de los datos en Python, análisis exploratorio, modelo de regresión logística en R y redacción del informe reproducible (HTML y PDF) |
+| Roberto Calderón | Dashboard de Power BI | Modelo de datos y medidas DAX, diseño de las cinco páginas del dashboard con segmentadores sincronizados y documentación de su uso |
+| Carlos Vela | Datos y documentación | Selección de la fuente, instrucciones de descarga, diccionario de datos y README con las instrucciones de reproducción |
+| Mayda Matul | Presentación y defensa | Diapositivas de la exposición, guion de la defensa y coordinación de los tiempos de cada integrante |
+
 ## Estructura
 
 ```
@@ -26,6 +35,8 @@ Proyecto final del curso de Ciencia de Datos. Analiza 590,672 denuncias de viole
 │   ├── dashboard.pbip            # proyecto de Power BI (código fuente, se edita aquí)
 │   ├── dashboard.SemanticModel/  # modelo de datos (TMDL)
 │   └── dashboard.Report/         # reporte (PBIR)
+├── presentacion/
+│   └── violencia-en-guatemala.pdf    # diapositivas de la defensa oral
 ├── requirements.txt              # paquetes de Python
 └── README.md
 ```
@@ -60,7 +71,7 @@ quarto render Violencia_en_Guatemala.qmd
 2. Un entorno `.venv/` dentro del proyecto: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`.
 3. Si no hay ninguno de los dos, el entorno automático.
 
-El informe usa el motor **knitr**. R controla el documento y ejecuta Python con `reticulate`: Python hace la ingesta, la limpieza y el análisis exploratorio, y R ajusta y grafica el modelo (`glm`, `ggplot2`). El render tarda alrededor de un minuto y medio. Además de los informes, genera `data/violencia_limpia.csv` y `data/poblacion_departamentos_2018.csv`, que usa el dashboard. `violencia_limpia.csv` pesa unos 124 MB y tampoco va en el repositorio: el equipo lo comparte por Google Drive (_enlace pendiente_). Sus variables están descritas en `data/DICCIONARIO_DATOS.md`.
+El informe usa el motor **knitr**. R controla el documento y ejecuta Python con `reticulate`: Python hace la ingesta, la limpieza y el análisis exploratorio, y R ajusta y grafica el modelo (`glm`, `ggplot2`). El render tarda alrededor de un minuto y medio. Además de los informes, genera `data/violencia_limpia.csv` y `data/poblacion_departamentos_2018.csv`, que usa el dashboard. `violencia_limpia.csv` pesa unos 124 MB y tampoco va en el repositorio: el equipo lo comparte por [Google Drive](https://drive.google.com/drive/folders/1VRrZMza08YiJrxO6vL2MaNazTsPhTS_K?usp=sharing). Sus variables están descritas en `data/DICCIONARIO_DATOS.md`.
 
 ## Dashboard
 
@@ -105,3 +116,15 @@ Requisitos: Power BI Desktop para Windows, en una versión reciente, y los dos C
 - `Calendario`: fechas de registro de las denuncias (`ANO_EMISION` y `MES_EMISION_NUM`). Las tendencias usan la fecha de registro; el día de la semana usa la fecha del hecho.
 - `Medidas`: 24 medidas DAX en las carpetas General, Víctima y agresor, Tipos de violencia, Tiempo y Territorio. La tasa por 100 mil es la tasa media anual con la población de 2018, igual que en el informe (248 a nivel nacional).
 
+## Presentación
+
+Las diapositivas de la defensa oral están en [`presentacion/violencia-en-guatemala.pdf`](presentacion/violencia-en-guatemala.pdf). La exposición dura de 15 a 20 minutos.
+
+## Declaración de autoría
+
+Cada integrante declara su rol y las tareas que realizó en el proyecto.
+
+- **Juan Luarca** (Informe de Quarto): limpié y transformé los datos en Python, hice el análisis exploratorio, ajusté y evalué el modelo de regresión logística en R y redacté el informe reproducible en Quarto.
+- **Roberto Calderón** (Dashboard de Power BI): construí el modelo de datos y las medidas DAX, diseñé las páginas del dashboard alineadas con las preguntas de investigación y documenté cómo abrirlo y actualizarlo.
+- **Carlos Vela** (Datos y documentación): seleccioné y documenté la fuente de datos, escribí las instrucciones de descarga, elaboré el diccionario de datos y redacté el README.
+- **Mayda Matul** (Presentación y defensa): preparé las diapositivas de la defensa oral, organicé el guion de la exposición y coordiné los tiempos de cada integrante.
