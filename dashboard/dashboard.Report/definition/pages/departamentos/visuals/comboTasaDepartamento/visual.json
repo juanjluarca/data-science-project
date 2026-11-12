@@ -1,0 +1,137 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "comboTasaDepartamento",
+  "position": {
+    "x": 980,
+    "y": 110,
+    "z": 9,
+    "height": 470,
+    "width": 920,
+    "tabOrder": 9
+  },
+  "visual": {
+    "visualType": "lineClusteredColumnComboChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "poblacion_departamentos_2018"
+                    }
+                  },
+                  "Property": "DEPARTAMENTO"
+                }
+              },
+              "queryRef": "poblacion_departamentos_2018.DEPARTAMENTO",
+              "nativeQueryRef": "DEPARTAMENTO",
+              "displayName": "Departamento"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "Tasa por 100 mil"
+                }
+              },
+              "queryRef": "Medidas.Tasa por 100 mil",
+              "nativeQueryRef": "Tasa por 100 mil",
+              "displayName": "Tasa por 100 mil"
+            }
+          ]
+        },
+        "Y2": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "Tasa nacional por 100 mil"
+                }
+              },
+              "queryRef": "Medidas.Tasa nacional por 100 mil",
+              "nativeQueryRef": "Tasa nacional por 100 mil",
+              "displayName": "Tasa nacional"
+            }
+          ]
+        }
+      },
+      "sortDefinition": {
+        "sort": [
+          {
+            "field": {
+              "Measure": {
+                "Expression": {
+                  "SourceRef": {
+                    "Entity": "Medidas"
+                  }
+                },
+                "Property": "Tasa por 100 mil"
+              }
+            },
+            "direction": "Descending"
+          }
+        ],
+        "isDefaultSort": false
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tasa anual por 100 mil habitantes por departamento'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'La línea marca la tasa nacional'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,236 @@
+/// Medidas DAX del dashboard, agrupadas en carpetas
+table Medidas
+	lineageTag: a5a6bbd6-cc30-48e6-b78a-b9d49eca99c0
+
+	/// Cada fila de violencia_limpia es una denuncia
+	measure Denuncias = COUNTROWS ( violencia_limpia )
+		formatString: #,0
+		displayFolder: General
+		lineageTag: c77b7b8f-c987-420b-9db1-4dabff0d3d5a
+
+	measure 'Años con registro' = DISTINCTCOUNT ( violencia_limpia[ANO_EMISION] )
+		formatString: 0
+		displayFolder: General
+		lineageTag: 0e645660-586b-423a-b296-dac1d0911fb5
+
+	measure 'Denuncias promedio anual' = DIVIDE ( [Denuncias], [Años con registro] )
+		formatString: #,0
+		displayFolder: General
+		lineageTag: 05109b21-6b12-4068-a5c0-6a9fa958feef
+
+	/// Participación dentro de lo que muestra el visual, respetando los segmentadores
+	measure '% del total' = DIVIDE ( [Denuncias], CALCULATE ( [Denuncias], ALLSELECTED () ) )
+		formatString: 0.0%
+		displayFolder: General
+		lineageTag: 55dfdef1-1c76-4527-b8a4-0846f3b81862
+
+	measure '% Víctimas mujeres' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[VIC_SEXO] = "mujeres" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Víctima y agresor
+		lineageTag: 7f657027-1872-4708-892f-8a0f91a835ce
+
+	measure '% Agresores hombres' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[AGR_SEXO] = "hombres" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Víctima y agresor
+		lineageTag: ae748524-6af5-455b-9141-c9b213004454
+
+	measure '% Mujer víctima y hombre agresor' =
+			DIVIDE (
+			    CALCULATE (
+			        [Denuncias],
+			        violencia_limpia[VIC_SEXO] = "mujeres",
+			        violencia_limpia[AGR_SEXO] = "hombres"
+			    ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Víctima y agresor
+		lineageTag: ae186c76-4fbd-402f-b379-fbbba873f233
+
+	/// Cónyuge, conviviente o excónyuge
+	measure '% Pareja o expareja' =
+			DIVIDE (
+			    CALCULATE (
+			        [Denuncias],
+			        violencia_limpia[VIC_REL_AGR] IN { "esposos(as)", "conviviente", "ex-conyuges" }
+			    ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Víctima y agresor
+		lineageTag: f7b58e9c-85e8-4fa7-8029-f8b1796d6294
+
+	measure 'Edad mediana de la víctima' = MEDIAN ( violencia_limpia[VIC_EDAD] )
+		formatString: 0
+		displayFolder: Víctima y agresor
+		lineageTag: de109d2d-0521-4173-b8a8-620975890bc7
+
+	measure 'Edad mediana del agresor' = MEDIAN ( violencia_limpia[AGR_EDAD] )
+		formatString: 0
+		displayFolder: Víctima y agresor
+		lineageTag: cf951821-2a15-4a06-8eb9-39a899012c0f
+
+	/// Sobre el total de denuncias, igual que el informe (12 % sin dato)
+	measure '% Víctimas indígenas' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[VIC_ES_INDIGENA] = "si" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Víctima y agresor
+		lineageTag: 6871cb11-5bc9-4645-bfeb-22fc2a592d50
+
+	/// La víctima ya había denunciado antes al mismo agresor. Sobre el total de denuncias (4.6 % sin dato)
+	measure '% Reincidencia' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[HEC_RECUR_DENUN] = "si" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Víctima y agresor
+		lineageTag: 29783931-30c1-43a6-92bc-7c0a674ee414
+
+	/// Los tipos de violencia no son excluyentes: los cuatro porcentajes suman más de 100 %
+	measure '% Violencia física' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[VIOLENCIA_FISICA] = "presente" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Tipos de violencia
+		lineageTag: 78dbd0df-22dc-4c95-afb9-4b89f1b92bc0
+
+	measure '% Violencia psicológica' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[VIOLENCIA_PSICOLOGICA] = "presente" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Tipos de violencia
+		lineageTag: b8974c29-e334-4c10-bffb-af6e95838bfb
+
+	measure '% Violencia sexual' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[VIOLENCIA_SEXUAL] = "presente" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Tipos de violencia
+		lineageTag: 244edc1f-4f21-4925-9dc6-2492268e578a
+
+	measure '% Violencia patrimonial' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[VIOLENCIA_PATRIMONIAL] = "presente" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Tipos de violencia
+		lineageTag: 8d9185ff-cef8-429b-9ed0-f79037a45f39
+
+	/// Denuncias del año anterior al último año visible
+	measure 'Denuncias año anterior' =
+			VAR UltimoAnio = MAX ( Calendario[Año] )
+			RETURN
+			    CALCULATE ( [Denuncias], REMOVEFILTERS ( Calendario ), Calendario[Año] = UltimoAnio - 1 )
+		formatString: #,0
+		displayFolder: Tiempo
+		lineageTag: 495c83e7-65ed-45d1-a0ce-03bff55f40f9
+
+	/// Cambio del último año visible frente al año anterior
+	measure 'Variación interanual %' =
+			VAR UltimoAnio = MAX ( Calendario[Año] )
+			VAR DenunciasUltimoAnio =
+			    CALCULATE ( [Denuncias], REMOVEFILTERS ( Calendario ), Calendario[Año] = UltimoAnio )
+			VAR DenunciasAnioAnterior = [Denuncias año anterior]
+			RETURN
+			    IF (
+			        DenunciasUltimoAnio > 0 && DenunciasAnioAnterior > 0,
+			        DIVIDE ( DenunciasUltimoAnio - DenunciasAnioAnterior, DenunciasAnioAnterior )
+			    )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Tiempo
+		lineageTag: c4ae45c5-f0b6-4066-984a-97bb7dfc7dfd
+
+	/// Promedio de denuncias del mismo mes en 2017, 2018 y 2019 (referencia antes de la pandemia)
+	measure 'Promedio mensual 2017-2019' =
+			DIVIDE (
+			    CALCULATE (
+			        [Denuncias],
+			        REMOVEFILTERS ( Calendario ),
+			        Calendario[Año] IN { 2017, 2018, 2019 },
+			        VALUES ( Calendario[Número de mes] )
+			    ),
+			    3
+			)
+		formatString: #,0
+		displayFolder: Tiempo
+		lineageTag: 9578775a-4103-4afe-bc0f-39b1a70e5dff
+
+	/// Denuncias de cada mes de 2020 frente al promedio del mismo mes en 2017-2019. Ignora el segmentador de año
+	measure 'Cambio 2020 vs 2017-2019 %' =
+			VAR Denuncias2020 =
+			    CALCULATE (
+			        [Denuncias],
+			        REMOVEFILTERS ( Calendario ),
+			        Calendario[Año] = 2020,
+			        VALUES ( Calendario[Número de mes] )
+			    )
+			VAR Referencia = [Promedio mensual 2017-2019]
+			RETURN
+			    DIVIDE ( Denuncias2020 - Referencia, Referencia )
+		formatString: +0.0%;-0.0%;0.0%
+		displayFolder: Tiempo
+		lineageTag: b2729755-f76a-4631-a1d6-c70cd411b193
+
+	measure Población = SUM ( poblacion_departamentos_2018[POBLACION_2018] )
+		formatString: #,0
+		displayFolder: Territorio
+		lineageTag: 589b24c6-87bb-46fd-b09f-64305d189a4a
+
+	/// Tasa media anual de denuncias por cada 100 mil habitantes (población del Censo 2018)
+	measure 'Tasa por 100 mil' =
+			DIVIDE ( [Denuncias], [Población] * [Años con registro] ) * 100000
+		formatString: #,0
+		displayFolder: Territorio
+		lineageTag: 6a004a74-d70e-46d3-8f4d-1cab875e20cc
+
+	/// Tasa de todo el país, sin importar el departamento seleccionado
+	measure 'Tasa nacional por 100 mil' =
+			CALCULATE ( [Tasa por 100 mil], REMOVEFILTERS ( poblacion_departamentos_2018 ) )
+		formatString: #,0
+		displayFolder: Territorio
+		lineageTag: 893c6ef9-c369-47ea-b7a4-edca9b058c95
+
+	/// Sobre el total de denuncias, igual que el informe (5.1 % sin dato)
+	measure '% Área rural' =
+			DIVIDE (
+			    CALCULATE ( [Denuncias], violencia_limpia[HEC_AREA] = "rural" ),
+			    [Denuncias]
+			)
+		formatString: 0.0%
+		displayFolder: Territorio
+		lineageTag: 613ab69b-867c-4217-9c0a-7bdd6c67dc03
+
+	column Auxiliar
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: fb439825-b6ce-44cb-8670-bea5a83d13a9
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Auxiliar]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Medidas = calculated
+		mode: import
+		source = ROW ( "Auxiliar", 0 )
+

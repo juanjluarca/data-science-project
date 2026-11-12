@@ -1,0 +1,22 @@
+model Model
+	culture: es-ES
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: es-GT
+	valueFilterBehavior: independent
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["RutaDatos","poblacion_departamentos_2018","violencia_limpia"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table Medidas
+ref table violencia_limpia
+ref table poblacion_departamentos_2018
+ref table Calendario
+
+ref cultureInfo es-ES
+

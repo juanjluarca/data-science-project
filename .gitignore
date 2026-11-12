@@ -9,3 +9,7 @@ data/violencia_limpia.csv
 .Rhistory
 .RData
 __pycache__/
+
+# Power BI: configuración local y caché de datos de cada usuario
+dashboard/**/.pbi/localSettings.json
+dashboard/**/.pbi/cache.abf

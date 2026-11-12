@@ -1,0 +1,141 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "barrasTiposViolencia",
+  "position": {
+    "x": 1310,
+    "y": 280,
+    "z": 15,
+    "height": 380,
+    "width": 590,
+    "tabOrder": 15
+  },
+  "visual": {
+    "visualType": "clusteredBarChart",
+    "query": {
+      "queryState": {
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "% Violencia física"
+                }
+              },
+              "queryRef": "Medidas.% Violencia física",
+              "nativeQueryRef": "% Violencia física",
+              "displayName": "Física"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "% Violencia psicológica"
+                }
+              },
+              "queryRef": "Medidas.% Violencia psicológica",
+              "nativeQueryRef": "% Violencia psicológica",
+              "displayName": "Psicológica"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "% Violencia sexual"
+                }
+              },
+              "queryRef": "Medidas.% Violencia sexual",
+              "nativeQueryRef": "% Violencia sexual",
+              "displayName": "Sexual"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "% Violencia patrimonial"
+                }
+              },
+              "queryRef": "Medidas.% Violencia patrimonial",
+              "nativeQueryRef": "% Violencia patrimonial",
+              "displayName": "Patrimonial"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'% de denuncias con cada tipo de violencia'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Una denuncia puede tener varios tipos: no suman 100 %'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+/// Carpeta que contiene violencia_limpia.csv y poblacion_departamentos_2018.csv, terminada en barra invertida
+expression RutaDatos = "\\wsl.localhost\Ubuntu\home\alejandro\URL_26\ciencia-datos\data-science-project\data\" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: dd57d483-6ee0-4509-b15c-8a6e49e55b3d
+
+	annotation PBI_ResultType = Text
+

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "mapaTasa",
+  "position": {
+    "x": 340,
+    "y": 110,
+    "z": 8,
+    "height": 950,
+    "width": 620,
+    "tabOrder": 8
+  },
+  "visual": {
+    "visualType": "azureMap",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "poblacion_departamentos_2018"
+                    }
+                  },
+                  "Property": "UBICACION_MAPA"
+                }
+              },
+              "queryRef": "poblacion_departamentos_2018.UBICACION_MAPA",
+              "nativeQueryRef": "UBICACION_MAPA",
+              "displayName": "Departamento"
+            }
+          ]
+        },
+        "Size": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "Tasa por 100 mil"
+                }
+              },
+              "queryRef": "Medidas.Tasa por 100 mil",
+              "nativeQueryRef": "Tasa por 100 mil",
+              "displayName": "Tasa por 100 mil"
+            }
+          ]
+        },
+        "Tooltips": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "Denuncias"
+                }
+              },
+              "queryRef": "Medidas.Denuncias",
+              "nativeQueryRef": "Denuncias",
+              "displayName": "Denuncias"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tasa anual de denuncias por 100 mil habitantes'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tamaño y color según la tasa'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

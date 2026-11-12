@@ -1,0 +1,138 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "dispersionTasaIndigena",
+  "position": {
+    "x": 980,
+    "y": 600,
+    "z": 10,
+    "height": 460,
+    "width": 440,
+    "tabOrder": 10
+  },
+  "visual": {
+    "visualType": "scatterChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "poblacion_departamentos_2018"
+                    }
+                  },
+                  "Property": "DEPARTAMENTO"
+                }
+              },
+              "queryRef": "poblacion_departamentos_2018.DEPARTAMENTO",
+              "nativeQueryRef": "DEPARTAMENTO",
+              "displayName": "Departamento"
+            }
+          ]
+        },
+        "X": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "% Víctimas indígenas"
+                }
+              },
+              "queryRef": "Medidas.% Víctimas indígenas",
+              "nativeQueryRef": "% Víctimas indígenas",
+              "displayName": "% víctimas indígenas"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "Tasa por 100 mil"
+                }
+              },
+              "queryRef": "Medidas.Tasa por 100 mil",
+              "nativeQueryRef": "Tasa por 100 mil",
+              "displayName": "Tasa por 100 mil"
+            }
+          ]
+        },
+        "Size": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "Población"
+                }
+              },
+              "queryRef": "Medidas.Población",
+              "nativeQueryRef": "Población",
+              "displayName": "Población"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Tasa vs. % de víctimas indígenas'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "subTitle": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Cada punto es un departamento'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

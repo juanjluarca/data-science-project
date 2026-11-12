@@ -1,0 +1,99 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "matrizViolenciaSexual",
+  "position": {
+    "x": 1393,
+    "y": 595,
+    "z": 13,
+    "height": 465,
+    "width": 507,
+    "tabOrder": 13
+  },
+  "visual": {
+    "visualType": "pivotTable",
+    "query": {
+      "queryState": {
+        "Rows": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "violencia_limpia"
+                    }
+                  },
+                  "Property": "RANGO_EDAD"
+                }
+              },
+              "queryRef": "violencia_limpia.RANGO_EDAD",
+              "nativeQueryRef": "RANGO_EDAD",
+              "displayName": "Rango de edad"
+            }
+          ]
+        },
+        "Columns": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "violencia_limpia"
+                    }
+                  },
+                  "Property": "SEXO_VICTIMA"
+                }
+              },
+              "queryRef": "violencia_limpia.SEXO_VICTIMA",
+              "nativeQueryRef": "SEXO_VICTIMA",
+              "displayName": "Sexo de la víctima"
+            }
+          ]
+        },
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "% Violencia sexual"
+                }
+              },
+              "queryRef": "Medidas.% Violencia sexual",
+              "nativeQueryRef": "% Violencia sexual",
+              "displayName": "% violencia sexual"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'% de denuncias con violencia sexual por edad y sexo de la víctima'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
