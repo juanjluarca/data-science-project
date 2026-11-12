@@ -1,0 +1,57 @@
+/// Población por departamento según el XII Censo Nacional de Población 2018 (INE)
+table poblacion_departamentos_2018
+	lineageTag: 540a33b0-85f7-4b89-aa29-14550609b79a
+
+	column HEC_DEPTO
+		dataType: string
+		isHidden
+		lineageTag: 2b43418f-2d09-4604-a1de-789b101f0ccb
+		summarizeBy: none
+		sourceColumn: HEC_DEPTO
+
+		annotation SummarizationSetBy = Automatic
+
+	column POBLACION_2018
+		dataType: int64
+		formatString: #,0
+		lineageTag: be568428-5d5e-4c68-8037-535407bd8c52
+		summarizeBy: sum
+		sourceColumn: POBLACION_2018
+
+		annotation SummarizationSetBy = User
+
+	/// Nombre del departamento con mayúsculas y tildes. Usar este campo en segmentadores y visuales
+	column DEPARTAMENTO
+		dataType: string
+		lineageTag: cf1ee1d4-35f2-419b-be42-11a12ff2974f
+		summarizeBy: none
+		sourceColumn: DEPARTAMENTO
+
+		annotation SummarizationSetBy = Automatic
+
+	/// "Departamento, Guatemala" para que el mapa ubique cada departamento
+	column UBICACION_MAPA
+		dataType: string
+		lineageTag: c2dc3ce8-d5ba-4824-bb6d-151ecdaf325a
+		dataCategory: StateOrProvince
+		summarizeBy: none
+		sourceColumn: UBICACION_MAPA
+
+		annotation SummarizationSetBy = Automatic
+
+	partition poblacion_departamentos_2018 = m
+		mode: import
+		source =
+				let
+				    Origen = Csv.Document(File.Contents(RutaDatos & "poblacion_departamentos_2018.csv"), [Delimiter = ",", Columns = 2, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    EncabezadosPromovidos = Table.PromoteHeaders(Origen, [PromoteAllScalars = true]),
+				    TiposCambiados = Table.TransformColumnTypes(EncabezadosPromovidos, {{"HEC_DEPTO", type text}, {"POBLACION_2018", Int64.Type}}, "en-US"),
+				    // Departamentos que llevan tilde; el resto solo se pasa a mayúscula inicial
+				    NombresConTilde = [quiche = "Quiché", peten = "Petén", solola = "Sololá", totonicapan = "Totonicapán", sacatepequez = "Sacatepéquez", suchitepequez = "Suchitepéquez"],
+				    ConDepartamento = Table.AddColumn(TiposCambiados, "DEPARTAMENTO", each Record.FieldOrDefault(NombresConTilde, [HEC_DEPTO], Text.Proper([HEC_DEPTO])), type text),
+				    ConUbicacionMapa = Table.AddColumn(ConDepartamento, "UBICACION_MAPA", each [DEPARTAMENTO] & ", Guatemala", type text)
+				in
+				    ConUbicacionMapa
+
+	annotation PBI_ResultType = Table
+

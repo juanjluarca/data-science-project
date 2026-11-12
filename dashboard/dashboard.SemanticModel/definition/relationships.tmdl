@@ -1,0 +1,9 @@
+relationship 2192a1b0-6864-41e2-881f-ad9f2ce6467a
+	joinOnDateBehavior: datePartOnly
+	fromColumn: violencia_limpia.FECHA_REGISTRO
+	toColumn: Calendario.Fecha
+
+relationship AutoDetected_7951dce1-be50-437c-b5dd-d5ad7ebaaac9
+	fromColumn: violencia_limpia.HEC_DEPTO
+	toColumn: poblacion_departamentos_2018.HEC_DEPTO
+

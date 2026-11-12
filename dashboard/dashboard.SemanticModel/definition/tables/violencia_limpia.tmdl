@@ -1,0 +1,402 @@
+/// Una fila por denuncia de violencia intrafamiliar (INE, 2008-2023). Ver data/DICCIONARIO_DATOS.md
+table violencia_limpia
+	lineageTag: b663d578-2794-4950-91bd-5df966be0c86
+
+	/// Año en que se registró la denuncia. Para filtrar, usar Calendario[Año]
+	column ANO_EMISION
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: e3f78f96-fdc7-46c4-ac73-e2f19a6d926a
+		summarizeBy: none
+		sourceColumn: ANO_EMISION
+
+		annotation SummarizationSetBy = User
+
+	column MES_EMISION_NUM
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: e78fb7e9-1f48-48e5-86b8-8f4bee65484d
+		summarizeBy: none
+		sourceColumn: MES_EMISION_NUM
+
+		annotation SummarizationSetBy = User
+
+	/// Fecha en que ocurrió la violencia (no la de registro)
+	column FECHA_HECHO
+		dataType: dateTime
+		formatString: Long Date
+		lineageTag: 1f5113ae-d5d3-4643-9f4d-2ef08415c2d0
+		summarizeBy: none
+		sourceColumn: FECHA_HECHO
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	/// 0 = lunes ... 6 = domingo
+	column DIA_SEMANA
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 8c1df4bb-b5cf-48c7-9625-35e17c02b030
+		summarizeBy: none
+		sourceColumn: DIA_SEMANA
+
+		annotation SummarizationSetBy = User
+
+	/// Para filtrar por departamento, usar poblacion_departamentos_2018[DEPARTAMENTO]
+	column HEC_DEPTO
+		dataType: string
+		isHidden
+		lineageTag: 65585cc0-a0e5-469b-98fb-145bf58620ee
+		summarizeBy: none
+		sourceColumn: HEC_DEPTO
+
+		annotation SummarizationSetBy = Automatic
+
+	column HEC_AREA
+		dataType: string
+		isHidden
+		lineageTag: 0229e108-fd0b-449d-b72c-474c2a2683a8
+		summarizeBy: none
+		sourceColumn: HEC_AREA
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIC_SEXO
+		dataType: string
+		isHidden
+		lineageTag: 9194b500-5151-455f-8157-75477e3fb40e
+		summarizeBy: none
+		sourceColumn: VIC_SEXO
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIC_EDAD
+		dataType: int64
+		formatString: 0
+		lineageTag: b2cc04dd-10b0-4e61-adc4-52470f6c6314
+		summarizeBy: none
+		sourceColumn: VIC_EDAD
+
+		annotation SummarizationSetBy = User
+
+	column VIC_RANGO_EDAD
+		dataType: string
+		isHidden
+		lineageTag: 74e7ca11-f5df-44a0-848a-8354dcde27ab
+		summarizeBy: none
+		sourceColumn: VIC_RANGO_EDAD
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIC_NIV_ESCOLARIDAD
+		dataType: string
+		isHidden
+		lineageTag: 9dc97b92-e6f0-4613-9301-581d54f98f42
+		summarizeBy: none
+		sourceColumn: VIC_NIV_ESCOLARIDAD
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIC_ES_INDIGENA
+		dataType: string
+		isHidden
+		lineageTag: e008c9da-c882-4896-93b5-3f55f299b58f
+		summarizeBy: none
+		sourceColumn: VIC_ES_INDIGENA
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIC_TRABAJA
+		dataType: string
+		lineageTag: 043bd120-0dd2-445d-bd13-b9863d9c5095
+		summarizeBy: none
+		sourceColumn: VIC_TRABAJA
+
+		annotation SummarizationSetBy = Automatic
+
+	column AGR_SEXO
+		dataType: string
+		isHidden
+		lineageTag: 112a4b9d-6aa7-42c1-b92e-4db2af3b3e6a
+		summarizeBy: none
+		sourceColumn: AGR_SEXO
+
+		annotation SummarizationSetBy = Automatic
+
+	column AGR_EDAD
+		dataType: int64
+		formatString: 0
+		lineageTag: 7e9db9f4-b53b-4b4a-b9d7-c61712798500
+		summarizeBy: none
+		sourceColumn: AGR_EDAD
+
+		annotation SummarizationSetBy = User
+
+	/// Edad del agresor menos edad de la víctima
+	column DIF_EDAD
+		dataType: int64
+		formatString: 0
+		lineageTag: d411ba5b-74fc-4137-b0f4-fb7f453b96a5
+		summarizeBy: none
+		sourceColumn: DIF_EDAD
+
+		annotation SummarizationSetBy = User
+
+	/// Se lee "la víctima es ... del agresor"
+	column VIC_REL_AGR
+		dataType: string
+		isHidden
+		lineageTag: 8c0803ee-9a9e-427c-b923-4d0e66894806
+		summarizeBy: none
+		sourceColumn: VIC_REL_AGR
+
+		annotation SummarizationSetBy = Automatic
+
+	column HEC_TIPAGRE
+		dataType: string
+		isHidden
+		lineageTag: fa9ad56d-fe5c-4ccc-9676-a10be346ef5b
+		summarizeBy: none
+		sourceColumn: HEC_TIPAGRE
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIOLENCIA_FISICA
+		dataType: string
+		lineageTag: 60f93072-aa39-4acf-a443-dc27748300a7
+		summarizeBy: none
+		sourceColumn: VIOLENCIA_FISICA
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIOLENCIA_PSICOLOGICA
+		dataType: string
+		lineageTag: d0dcb7ac-c217-41ca-b4e7-f80525c8bdda
+		summarizeBy: none
+		sourceColumn: VIOLENCIA_PSICOLOGICA
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIOLENCIA_SEXUAL
+		dataType: string
+		lineageTag: fbb43b63-8dd9-448c-bd12-769ffcc1dcb9
+		summarizeBy: none
+		sourceColumn: VIOLENCIA_SEXUAL
+
+		annotation SummarizationSetBy = Automatic
+
+	column VIOLENCIA_PATRIMONIAL
+		dataType: string
+		lineageTag: 5be37232-cf75-4fb6-959b-b2d01f5b072a
+		summarizeBy: none
+		sourceColumn: VIOLENCIA_PATRIMONIAL
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Si la víctima ya había denunciado antes al mismo agresor
+	column HEC_RECUR_DENUN
+		dataType: string
+		lineageTag: 43a1e95c-02b2-4637-bcb7-33d1f1414a98
+		summarizeBy: none
+		sourceColumn: HEC_RECUR_DENUN
+
+		annotation SummarizationSetBy = Automatic
+
+	column INST_DENUN_HECHO
+		dataType: string
+		lineageTag: a56c9b0f-3d7c-4432-b697-39044c95bde3
+		summarizeBy: none
+		sourceColumn: INST_DENUN_HECHO
+
+		annotation SummarizationSetBy = Automatic
+
+	column QUIEN_REPORTA
+		dataType: string
+		lineageTag: 1edefdba-9ff3-4b6b-91ab-b92f87525e6f
+		summarizeBy: none
+		sourceColumn: QUIEN_REPORTA
+
+		annotation SummarizationSetBy = Automatic
+
+	column TOTAL_HIJOS
+		dataType: int64
+		formatString: 0
+		lineageTag: 12ae17c8-1a59-4aa8-a5ae-02d9bdb2bb22
+		summarizeBy: none
+		sourceColumn: TOTAL_HIJOS
+
+		annotation SummarizationSetBy = User
+
+	column MEDIDAS_SEGURIDAD
+		dataType: string
+		lineageTag: 5953d39a-1f9e-44f2-a5e0-11460dc963ab
+		summarizeBy: none
+		sourceColumn: MEDIDAS_SEGURIDAD
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Primer día del mes de registro. Relaciona la tabla con Calendario
+	column FECHA_REGISTRO
+		dataType: dateTime
+		isHidden
+		formatString: mmmm yyyy
+		lineageTag: eeef2b2b-f954-4c35-af5b-f64e1a8acf51
+		summarizeBy: none
+		sourceColumn: FECHA_REGISTRO
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column DIA_SEMANA_NOMBRE
+		dataType: string
+		lineageTag: 8774c017-1b49-4d10-a9de-d388fe3b871e
+		summarizeBy: none
+		sourceColumn: DIA_SEMANA_NOMBRE
+		sortByColumn: DIA_SEMANA
+
+		annotation SummarizationSetBy = Automatic
+
+	column SEXO_VICTIMA
+		dataType: string
+		lineageTag: 472fcb32-2422-45d9-89c7-552374351d7e
+		summarizeBy: none
+		sourceColumn: SEXO_VICTIMA
+
+		annotation SummarizationSetBy = Automatic
+
+	column SEXO_AGRESOR
+		dataType: string
+		lineageTag: 440d45fb-24b8-4505-bf5c-db4a6d973bd5
+		summarizeBy: none
+		sourceColumn: SEXO_AGRESOR
+
+		annotation SummarizationSetBy = Automatic
+
+	column AREA
+		dataType: string
+		lineageTag: a043eda9-cda6-414c-bf01-a89ea3894d08
+		summarizeBy: none
+		sourceColumn: AREA
+
+		annotation SummarizationSetBy = Automatic
+
+	column INDIGENA
+		dataType: string
+		lineageTag: 7c75926a-8edf-45cb-8764-56dda42d57f1
+		summarizeBy: none
+		sourceColumn: INDIGENA
+
+		annotation SummarizationSetBy = Automatic
+
+	column RANGO_EDAD
+		dataType: string
+		lineageTag: 45c82971-72d8-4a76-ac3f-5c10ec8587eb
+		summarizeBy: none
+		sourceColumn: RANGO_EDAD
+		sortByColumn: ORDEN_RANGO_EDAD
+
+		annotation SummarizationSetBy = Automatic
+
+	column ORDEN_RANGO_EDAD
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 19554082-ee34-4b95-8ae7-f3aaa03ee0f1
+		summarizeBy: none
+		sourceColumn: ORDEN_RANGO_EDAD
+
+		annotation SummarizationSetBy = User
+
+	column ESCOLARIDAD
+		dataType: string
+		lineageTag: 5d1180b2-d590-4d10-bf64-73590abd337d
+		summarizeBy: none
+		sourceColumn: ESCOLARIDAD
+		sortByColumn: ORDEN_ESCOLARIDAD
+
+		annotation SummarizationSetBy = Automatic
+
+	column ORDEN_ESCOLARIDAD
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 0cba64ca-c344-4e20-a0d4-47b557da911c
+		summarizeBy: none
+		sourceColumn: ORDEN_ESCOLARIDAD
+
+		annotation SummarizationSetBy = User
+
+	/// Relación de la víctima con el agresor: "la víctima es ... del agresor"
+	column RELACION
+		dataType: string
+		lineageTag: 9dee35f2-9b4c-476b-99b0-26cd7aec6939
+		summarizeBy: none
+		sourceColumn: RELACION
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Relación agrupada en las 5 categorías del modelo del informe
+	column RELACION_GRUPO
+		dataType: string
+		lineageTag: 427f4cb4-b612-4d65-b293-c6435569c76b
+		summarizeBy: none
+		sourceColumn: RELACION_GRUPO
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Combinación de tipos de violencia (una categoría por denuncia)
+	column TIPO_VIOLENCIA_COMBINADA
+		dataType: string
+		lineageTag: 59cdfc06-e20f-4c5e-b4fe-c8b9bca2adb6
+		summarizeBy: none
+		sourceColumn: TIPO_VIOLENCIA_COMBINADA
+
+		annotation SummarizationSetBy = Automatic
+
+	partition violencia_limpia = m
+		mode: import
+		source =
+				let
+				    Origen = Csv.Document(File.Contents(RutaDatos & "violencia_limpia.csv"), [Delimiter = ",", Columns = 26, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    EncabezadosPromovidos = Table.PromoteHeaders(Origen, [PromoteAllScalars = true]),
+				    TiposCambiados = Table.TransformColumnTypes(EncabezadosPromovidos, {{"ANO_EMISION", Int64.Type}, {"MES_EMISION_NUM", Int64.Type}, {"FECHA_HECHO", type date}, {"DIA_SEMANA", Int64.Type}, {"HEC_DEPTO", type text}, {"HEC_AREA", type text}, {"VIC_SEXO", type text}, {"VIC_EDAD", Int64.Type}, {"VIC_RANGO_EDAD", type text}, {"VIC_NIV_ESCOLARIDAD", type text}, {"VIC_ES_INDIGENA", type text}, {"VIC_TRABAJA", type text}, {"AGR_SEXO", type text}, {"AGR_EDAD", Int64.Type}, {"DIF_EDAD", Int64.Type}, {"VIC_REL_AGR", type text}, {"HEC_TIPAGRE", type text}, {"VIOLENCIA_FISICA", type text}, {"VIOLENCIA_PSICOLOGICA", type text}, {"VIOLENCIA_SEXUAL", type text}, {"VIOLENCIA_PATRIMONIAL", type text}, {"HEC_RECUR_DENUN", type text}, {"INST_DENUN_HECHO", type text}, {"QUIEN_REPORTA", type text}, {"TOTAL_HIJOS", Int64.Type}, {"MEDIDAS_SEGURIDAD", type text}}, "en-US"),
+
+				    // Etiquetas para mostrar en el reporte. Las columnas originales no cambian.
+				    Capitalizar = (texto as nullable text) as nullable text =>
+				        if texto = null or texto = "" then texto else Text.Upper(Text.Start(texto, 1)) & Text.Middle(texto, 1),
+				    Buscar = (tabla as record, clave as nullable text, valorPorDefecto as any) as any =>
+				        if clave = null then valorPorDefecto else Record.FieldOrDefault(tabla, clave, valorPorDefecto),
+				    NombreDia = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"},
+				    EtiquetaRangoEdad = [ninio = "Niñez (1-13)", adolescente = "Adolescencia (14-18)", #"adulto joven" = "Adulto joven (19-40)", #"adulto medio" = "Adulto medio (41-60)", #"adulto mayor" = "Adulto mayor (61+)", ignorado = "Ignorado"],
+				    OrdenRangoEdad = [ninio = 1, adolescente = 2, #"adulto joven" = 3, #"adulto medio" = 4, #"adulto mayor" = 5, ignorado = 6],
+				    EtiquetaEscolaridad = [ninguno = "Ninguno", primaria = "Primaria", basicos = "Básicos", diversificado = "Diversificado", universidad = "Universidad", ignorado = "Ignorado"],
+				    OrdenEscolaridad = [ninguno = 1, primaria = 2, basicos = 3, diversificado = 4, universidad = 5, ignorado = 6],
+				    EtiquetaIndigena = [si = "Sí", no = "No", ignorado = "Ignorado"],
+				    EtiquetaRelacion = [#"esposos(as)" = "Cónyuge", conviviente = "Conviviente", #"ex-conyuges" = "Excónyuge", #"otro pariente" = "Otro pariente", #"hermanos(as)" = "Hermano(a)", #"padres/madres" = "Madre o padre", #"hijos(as)" = "Hijo(a)", #"suegros(as)" = "Suegro(a)", #"hijastros(as)" = "Hijastro(a)", #"nietos(as)" = "Nieto(a)"],
+				    GrupoRelacion = [#"esposos(as)" = "Pareja actual", conviviente = "Pareja actual", #"ex-conyuges" = "Expareja", #"padres/madres" = "Hijo(a) o yerno/nuera agrede", #"suegros(as)" = "Hijo(a) o yerno/nuera agrede", #"hijos(as)" = "Padre/madre o abuelo(a) agrede", #"hijastros(as)" = "Padre/madre o abuelo(a) agrede", #"nietos(as)" = "Padre/madre o abuelo(a) agrede", #"hermanos(as)" = "Otro familiar", #"otro pariente" = "Otro familiar"],
+
+				    ConFechaRegistro = Table.AddColumn(TiposCambiados, "FECHA_REGISTRO", each #date([ANO_EMISION], [MES_EMISION_NUM], 1), type date),
+				    ConDiaSemana = Table.AddColumn(ConFechaRegistro, "DIA_SEMANA_NOMBRE", each if [DIA_SEMANA] = null then "Sin fecha" else NombreDia{[DIA_SEMANA]}, type text),
+				    ConSexoVictima = Table.AddColumn(ConDiaSemana, "SEXO_VICTIMA", each Capitalizar([VIC_SEXO]), type text),
+				    ConSexoAgresor = Table.AddColumn(ConSexoVictima, "SEXO_AGRESOR", each Capitalizar([AGR_SEXO]), type text),
+				    ConArea = Table.AddColumn(ConSexoAgresor, "AREA", each Capitalizar([HEC_AREA]), type text),
+				    ConIndigena = Table.AddColumn(ConArea, "INDIGENA", each Buscar(EtiquetaIndigena, [VIC_ES_INDIGENA], "Ignorado"), type text),
+				    ConRangoEdad = Table.AddColumn(ConIndigena, "RANGO_EDAD", each Buscar(EtiquetaRangoEdad, [VIC_RANGO_EDAD], "Ignorado"), type text),
+				    ConOrdenRangoEdad = Table.AddColumn(ConRangoEdad, "ORDEN_RANGO_EDAD", each Buscar(OrdenRangoEdad, [VIC_RANGO_EDAD], 6), Int64.Type),
+				    ConEscolaridad = Table.AddColumn(ConOrdenRangoEdad, "ESCOLARIDAD", each Buscar(EtiquetaEscolaridad, [VIC_NIV_ESCOLARIDAD], "Ignorado"), type text),
+				    ConOrdenEscolaridad = Table.AddColumn(ConEscolaridad, "ORDEN_ESCOLARIDAD", each Buscar(OrdenEscolaridad, [VIC_NIV_ESCOLARIDAD], 6), Int64.Type),
+				    ConRelacion = Table.AddColumn(ConOrdenEscolaridad, "RELACION", each Buscar(EtiquetaRelacion, [VIC_REL_AGR], "Sin dato"), type text),
+				    ConRelacionGrupo = Table.AddColumn(ConRelacion, "RELACION_GRUPO", each Buscar(GrupoRelacion, [VIC_REL_AGR], "Sin dato"), type text),
+				    ConTipoCombinado = Table.AddColumn(ConRelacionGrupo, "TIPO_VIOLENCIA_COMBINADA", each
+				        if [HEC_TIPAGRE] = null then null
+				        else Capitalizar(Text.Replace(Text.Replace(Text.Replace([HEC_TIPAGRE], "psicologica", "psicológica"), "fisica", "física"), "-", " + ")), type text)
+				in
+				    ConTipoCombinado
+
+	annotation PBI_ResultType = Table
+

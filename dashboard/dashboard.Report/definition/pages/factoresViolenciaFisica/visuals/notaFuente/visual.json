@@ -1,0 +1,64 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "notaFuente",
+  "position": {
+    "x": 20,
+    "y": 900,
+    "z": 7,
+    "height": 160,
+    "width": 300,
+    "tabOrder": 7
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Fuente: INE Guatemala, denuncias de violencia intrafamiliar 2008-2023.",
+                    "textStyle": {
+                      "fontSize": "9pt",
+                      "fontWeight": "normal",
+                      "color": "#605E5C"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Son denuncias registradas, no toda la violencia que ocurre.",
+                    "textStyle": {
+                      "fontSize": "9pt",
+                      "fontWeight": "normal",
+                      "color": "#605E5C"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "false"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

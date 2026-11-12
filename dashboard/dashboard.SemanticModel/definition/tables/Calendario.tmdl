@@ -1,0 +1,77 @@
+/// Calendario de la fecha de registro de las denuncias (años de ANO_EMISION)
+table Calendario
+	dataCategory: Time
+	lineageTag: 259b7a2b-ddc4-4bb9-bc9d-de846a2fc186
+
+	column Fecha
+		dataType: dateTime
+		isKey
+		formatString: dd/mm/yyyy
+		lineageTag: a26f0303-5c1f-49f6-8df7-0b43d274f4f3
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Fecha]
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Año = YEAR ( [Fecha] )
+		dataType: int64
+		formatString: 0
+		lineageTag: 7dbcdcea-797e-41da-8ea3-a37d867bb5f7
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	column 'Número de mes' = MONTH ( [Fecha] )
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: ffe07a25-5e43-475e-a894-95f71fa631df
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	column Mes =
+			SWITCH (
+			    MONTH ( [Fecha] ),
+			    1, "Ene", 2, "Feb", 3, "Mar", 4, "Abr", 5, "May", 6, "Jun",
+			    7, "Jul", 8, "Ago", 9, "Sep", 10, "Oct", 11, "Nov", 12, "Dic"
+			)
+		dataType: string
+		lineageTag: 68995298-8d73-4fb4-83f6-60b1e50870f4
+		summarizeBy: none
+		sortByColumn: 'Número de mes'
+
+		annotation SummarizationSetBy = Automatic
+
+	/// Primer día de cada mes, para series mensuales con eje continuo
+	column 'Inicio de mes' = DATE ( YEAR ( [Fecha] ), MONTH ( [Fecha] ), 1 )
+		dataType: dateTime
+		formatString: mmm yyyy
+		lineageTag: e113e1c9-a444-44f4-b45f-fcb036381bd5
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column Trimestre = "T" & ROUNDUP ( MONTH ( [Fecha] ) / 3, 0 )
+		dataType: string
+		lineageTag: c40c7c3b-a294-4404-8199-36615527a9c2
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Calendario = calculated
+		mode: import
+		source =
+				SELECTCOLUMNS (
+				    CALENDAR (
+				        DATE ( MIN ( violencia_limpia[ANO_EMISION] ), 1, 1 ),
+				        DATE ( MAX ( violencia_limpia[ANO_EMISION] ), 12, 31 )
+				    ),
+				    "Fecha", [Date]
+				)
+

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.7.0/schema.json",
+  "name": "barrasSexoVictimaAgresor",
+  "position": {
+    "x": 340,
+    "y": 110,
+    "z": 8,
+    "height": 465,
+    "width": 507,
+    "tabOrder": 8
+  },
+  "visual": {
+    "visualType": "hundredPercentStackedBarChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "violencia_limpia"
+                    }
+                  },
+                  "Property": "SEXO_VICTIMA"
+                }
+              },
+              "queryRef": "violencia_limpia.SEXO_VICTIMA",
+              "nativeQueryRef": "SEXO_VICTIMA",
+              "displayName": "Sexo de la víctima"
+            }
+          ]
+        },
+        "Series": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "violencia_limpia"
+                    }
+                  },
+                  "Property": "SEXO_AGRESOR"
+                }
+              },
+              "queryRef": "violencia_limpia.SEXO_AGRESOR",
+              "nativeQueryRef": "SEXO_AGRESOR",
+              "displayName": "Sexo del agresor"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Medidas"
+                    }
+                  },
+                  "Property": "Denuncias"
+                }
+              },
+              "queryRef": "Medidas.Denuncias",
+              "nativeQueryRef": "Denuncias",
+              "displayName": "Denuncias"
+            }
+          ]
+        }
+      }
+    },
+    "drillFilterOtherVisuals": true,
+    "objects": {
+      "labels": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Sexo del agresor según el sexo de la víctima'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
